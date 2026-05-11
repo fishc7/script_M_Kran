@@ -374,3 +374,5 @@ Traceback (most recent call last):
 werkzeug.exceptions.NotFound: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
 2026-05-11 10:38:14,019 - ERROR - Скрипт не найден по пути: D:\МК_Кран\МК_Кран_Кингесеп\ОГС\Журналы\gost_32569_12_3_17_analyzer_v5.py
 2026-05-11 10:38:14,020 - ERROR - Скрипт не найден ни по одному из путей
+2026-05-11 11:20:51,489 - ERROR - Скрипт не найден по пути: D:\МК_Кран\МК_Кран_Кингесеп\ОГС\Журналы\gost_32569_12_3_17_analyzer_v5.py
+2026-05-11 11:20:51,490 - ERROR - Скрипт не найден ни по одному из путей
