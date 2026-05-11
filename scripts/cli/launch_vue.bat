@@ -1,4 +1,8 @@
 @echo off
+setlocal
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..\..") do set "PROJECT_ROOT=%%~fI"
+cd /d "%PROJECT_ROOT%"
 chcp 65001 >nul
 title Vue.js Application Launcher
 
@@ -30,14 +34,14 @@ echo npm найден.
 echo Node.js и npm найдены.
 
 REM Проверяем наличие web/app/app.py
-if not exist "web\app\app.py" (
+if not exist "%PROJECT_ROOT%\web\app\app.py" (
     echo ОШИБКА: Файл web\app\app.py не найден
     pause
     exit /b 1
 )
 
 REM Проверяем наличие package.json
-if not exist "web\package.json" (
+if not exist "%PROJECT_ROOT%\web\package.json" (
     echo ОШИБКА: Файл web\package.json не найден
     pause
     exit /b 1
@@ -45,7 +49,7 @@ if not exist "web\package.json" (
 
 REM Проверяем зависимости Vue.js
 echo Проверка зависимостей Vue.js...
-cd /d "%~dp0web"
+cd /d "%PROJECT_ROOT%\web"
 if not exist "node_modules" (
     echo Устанавливаем зависимости Vue.js...
     npm install
@@ -78,7 +82,7 @@ echo Vue.js приложение успешно собрано!
 
 REM Проверяем зависимости Flask
 echo Проверка зависимостей Flask...
-cd /d "%~dp0"
+cd /d "%PROJECT_ROOT%"
 python -c "import flask" 2>nul
 if errorlevel 1 (
     echo Устанавливаем Flask...
@@ -116,7 +120,7 @@ echo Нажмите Ctrl+C для остановки сервера
 echo.
 
 REM Запускаем Flask сервер в фоновом режиме
-cd /d "%~dp0web\app"
+cd /d "%PROJECT_ROOT%\web\app"
 start /b python app.py
 
 REM Ждем немного, чтобы сервер успел запуститься
@@ -146,3 +150,5 @@ if not errorlevel 1 (
 echo.
 echo Нажмите любую клавишу для выхода...
 pause >nul
+endlocal
+exit /b 0

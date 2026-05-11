@@ -1,4 +1,8 @@
 @echo off
+setlocal
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..\..") do set "PROJECT_ROOT=%%~fI"
+cd /d "%PROJECT_ROOT%"
 chcp 65001 >nul
 title Менеджер резервного копирования M_Kran
 
@@ -38,7 +42,7 @@ goto menu
 :full_backup
 cls
 echo Создание полного бэкапа...
-python backup_system.py --type full
+python "%PROJECT_ROOT%\backup_system.py" --type full
 echo.
 pause
 goto menu
@@ -46,7 +50,7 @@ goto menu
 :critical_backup
 cls
 echo Создание критического бэкапа...
-python backup_system.py --type critical
+python "%PROJECT_ROOT%\backup_system.py" --type critical
 echo.
 pause
 goto menu
@@ -54,7 +58,7 @@ goto menu
 :database_backup
 cls
 echo Создание бэкапа базы данных...
-python backup_system.py --type database
+python "%PROJECT_ROOT%\backup_system.py" --type database
 echo.
 pause
 goto menu
@@ -63,7 +67,7 @@ goto menu
 cls
 echo Список всех бэкапов:
 echo.
-python backup_system.py --list
+python "%PROJECT_ROOT%\backup_system.py" --list
 echo.
 pause
 goto menu
@@ -73,7 +77,7 @@ cls
 echo Проверка целостности бэкапа
 echo.
 set /p backup_path="Введите путь к бэкапу: "
-python backup_system.py --verify "%backup_path%"
+python "%PROJECT_ROOT%\backup_system.py" --verify "%backup_path%"
 echo.
 pause
 goto menu
@@ -85,9 +89,9 @@ echo.
 set /p backup_path="Введите путь к бэкапу: "
 set /p restore_dir="Введите папку для восстановления (Enter для авто): "
 if "%restore_dir%"=="" (
-    python backup_system.py --restore "%backup_path%"
+    python "%PROJECT_ROOT%\backup_system.py" --restore "%backup_path%"
 ) else (
-    python backup_system.py --restore "%backup_path%" --restore-dir "%restore_dir%"
+    python "%PROJECT_ROOT%\backup_system.py" --restore "%backup_path%" --restore-dir "%restore_dir%"
 )
 echo.
 pause
@@ -99,14 +103,15 @@ echo Очистка старых бэкапов
 echo.
 set /p keep_count="Сколько последних бэкапов оставить (по умолчанию 10): "
 if "%keep_count%"=="" set keep_count=10
-python backup_system.py --cleanup %keep_count%
+python "%PROJECT_ROOT%\backup_system.py" --cleanup %keep_count%
 echo.
 pause
 goto menu
 
 :exit
 echo До свидания!
-exit
+endlocal
+exit /b 0
 
 
 

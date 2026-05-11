@@ -1,6 +1,8 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..\..") do set "PROJECT_ROOT=%%~fI"
+cd /d "%PROJECT_ROOT%"
 chcp 65001 >nul
 title M_Kran Visible Launcher
 
@@ -15,9 +17,9 @@ set PYTHONLEGACYWINDOWSSTDIO=1
 set "PY_EXE=%LocalAppData%\Programs\Python\Python314\python.exe"
 
 if exist "%PY_EXE%" (
-  "%PY_EXE%" "web_launcher.py"
+  "%PY_EXE%" "%PROJECT_ROOT%\web_launcher.py"
 ) else (
-  python "web_launcher.py"
+  python "%PROJECT_ROOT%\web_launcher.py"
 )
 
 echo.
