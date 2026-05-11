@@ -1,0 +1,174 @@
+================================================================================
+Скрипт каталога заключений НК из облака S3 — описание и ПОЛНЫЙ перечень правок
+================================================================================
+
+Этот файл описывает функциональность и перечисляет ВСЕ изменения в репозитории,
+связанные с каталогом НК из S3 и открытием файлов s3:// из веб-приложения.
+
+
+================================================================================
+ЧАСТЬ 1. Скрипт каталога из облака
+================================================================================
+
+Файл скрипта:
+  scripts/data_loaders/create_ndt_reports_table_s3.py
+
+Назначение:
+  Заполняет таблицу SQLite folder_NDT_Report списком объектов из S3-бакета
+  (аналог локального create_ndt_reports_table.py; источник — облако).
+
+Результат в базе:
+  Таблица: folder_NDT_Report
+  Поля:
+    file_name          — имя файла (последний сегмент ключа в бакете)
+    full_path          — URI вида s3://имя_бакета/ключ/к/файлу.pdf
+    _Номер_заключений  — все группы цифр из имени файла, склеенные (как локально)
+
+  Перед вставкой: DELETE FROM folder_NDT_Report, затем INSERT всех найденных.
+
+Учитываемые расширения:
+  .pdf .doc .docx .xls .xlsx .txt .rtf
+
+Реализация (внутри скрипта):
+  — Подключение к БД: get_database_path() из scripts/utilities/db_utils
+  — Создание таблицы и вставка: переиспользуются функции из
+    create_ndt_reports_table.py (create_ndt_reports_table, update_ndt_reports_table,
+    extract_conclusion_number)
+  — Список объектов: boto3 list_objects_v2 с пагинацией по префиксу
+  — В начале модуля: project_root, подгрузка .env через load_dotenv (override=False)
+  — Логи: logs/create_ndt_reports_table_s3_*.log в корне проекта
+
+Зависимости:
+  boto3, python-dotenv (см. requirements.txt в корне)
+
+Переменные окружения / .env (корень script_M_Kran):
+  S3_ENDPOINT_URL, S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+  S3_PREFIX (по умолчанию в коде: НК/Заключения/)
+  Допускаются: AWS_ENDPOINT_URL, AWS_S3_BUCKET, AWS_DEFAULT_REGION, S3_REGION
+
+Формат .env:
+  Только строки KEY=value. НЕ использовать синтаксис PowerShell ($env:NAME=...),
+  иначе python-dotenv воспринимает имя переменной буквально как "$env:NAME".
+
+Запуск:
+  python scripts/data_loaders/create_ndt_reports_table_s3.py
+  python scripts/data_loaders/create_ndt_reports_table_s3.py --dry-run
+  Параметры: --endpoint --bucket --prefix --region
+
+  Точка входа для GUI: run_script()
+
+Пустой список файлов в бакете:
+  Таблица не перезаписывается (как при пустой локальной папке).
+
+
+================================================================================
+ЧАСТЬ 2. Веб-приложение: открытие s3:// из таблицы
+================================================================================
+
+Проблема (исходная):
+  — os.path.normpath("s3://...") на Windows превращал URI в s3:\... ;
+    os.path.exists() давал «Файл не найден».
+  — Presigned URL в браузере к Selectel часто возвращал XML AccessDenied.
+
+Решение:
+  — Для путей s3:// не вызывать normpath как для локального диска.
+  — Открытие: браузер ведёт на URL самого Flask /api/s3_get_object?uri=...
+    Сервер выполняет get_object теми же ключами из .env и отдаёт поток байт
+    (без presigned ссылки на Selectel).
+
+Файлы веб-части:
+  web/app/s3_file_utils.py        — НОВЫЙ файл
+  web/app/app.py                  — ПРАВКИ (см. раздел 3 ниже)
+
+
+================================================================================
+ЧАСТЬ 3. ПОЛНЫЙ перечень файлов и правок в репозитории
+================================================================================
+
+1) scripts/data_loaders/create_ndt_reports_table_s3.py
+   СТАТУС: добавлен (новый файл).
+   СОДЕРЖАНИЕ:
+   — Листинг S3 по префиксу, фильтр расширений, формирование s3://bucket/key
+   — Вызов create_ndt_reports_table / update_ndt_reports_table из соседнего модуля
+   — argparse, dry-run, импорт create_ndt_reports_table с fallback через importlib
+   — load_dotenv из корня проекта после вычисления project_root
+   — В докстринге: примечание про региональный endpoint Selectel (ru-3 и т.д.)
+
+2) requirements.txt (корень проекта)
+   СТАТУС: изменён.
+   ПРАВКИ: добавлены строки
+   — boto3>=1.28.0
+   — python-dotenv>=1.0.0
+
+3) .gitignore (корень проекта)
+   СТАТУС: добавлен (новый файл), если ранее не существовал.
+   СОДЕРЖАНИЕ: игнор .env и .env.* с исключением !.env.example
+
+4) .env.example (корень проекта)
+   СТАТУС: добавлен (шаблон без секретов).
+   СОДЕРЖАНИЕ: пример S3_ENDPOINT_URL (в т.ч. пример ru-3), S3_BUCKET, ключи,
+   опционально S3_PREFIX и регион.
+   ПРИМЕЧАНИЕ: ваш рабочий .env в репозиторий не коммитится.
+
+5) web/app/s3_file_utils.py
+   СТАТУС: добавлен (новый файл).
+   СОДЕРЖАНИЕ:
+   — project_root_dir(), load_project_dotenv(), _load_dotenv_optional()
+   — parse_s3_uri() для s3://bucket/key (urllib.parse.unquote для ключа)
+   — get_s3_client(): boto3, endpoint из env, Config(signature_version="s3v4"),
+     region_name из AWS_DEFAULT_REGION / S3_REGION или эвристика из hostname
+     (_region_hint_from_endpoint: ru-7, ru-3, gis-1, uz-2, kz-1 и т.д., иначе us-east-1)
+   — open_s3_uri_in_default_app(s3_uri, app_base_url): head_object, затем
+     webbrowser.open(…/api/s3_get_object?uri=…) — открытие через прокси приложения
+
+6) web/app/app.py
+   СТАТУС: изменён.
+   ПРАВКИ:
+   — Импорт из Flask дополнен: Response, stream_with_context
+   — Новый маршрут GET /api/s3_get_object:
+       · load_project_dotenv()
+       · параметр uri (полный s3://…)
+       · опциональная проверка: если задан S3_BUCKET (или AWS_S3_BUCKET), разрешён
+         только этот бакет (иначе 403)
+       · client.get_object, потоковая отдача через Response(stream_with_context),
+         чтение чанками 256 КБ, закрытие Body в finally
+       · заголовки Content-Type, Content-Disposition (inline + filename* UTF-8
+         для кириллицы в имени), Cache-Control
+   — Маршрут /api/open_file:
+       · если path начинается с s3:// (до normpath): вызов
+         open_s3_uri_in_default_app(path, request.url_root)
+       · иначе прежняя логика для локальных путей (normpath, exists, allowed_paths,
+         os.startfile и т.д.)
+   — Маршрут /api/open_file_location:
+       · если path начинается с s3:// — ответ 400 с текстом, что папку в
+         проводнике для S3 открыть нельзя
+
+7) web/app/requirements.txt
+   СТАТУС: изменён.
+   ПРАВКИ: добавлены boto3>=1.28.0 и python-dotenv>=1.0.0 (для venv веба).
+
+8) scripts/data_loaders/NDT_S3_catalog_script.txt
+   СТАТУС: добавлен, затем дополнен этим полным описанием (текущий файл).
+
+Файлы, которые НЕ менялись логикой каталога, но важны для работы:
+  — scripts/data_loaders/create_ndt_reports_table.py — без изменений;
+    новый S3-скрипт его импортирует.
+  — .env у вас локально: endpoint для Selectel (для бакета в пуле ru-3 —
+    https://s3.ru-3.storage.selcloud.ru), S3_BUCKET, S3_PREFIX, ключи.
+
+
+================================================================================
+ЧАСТЬ 4. Поведение «Открыть» в интерфейсе (итог)
+================================================================================
+
+1. В таблице в full_path хранится s3://бакет/ключ/к/файлу
+2. Запрос к /api/open_file?path=…
+3. Для s3:// сервер открывает системный браузер по URL вида:
+   <ваш_host>/api/s3_get_object?uri=<urlencoded s3 URI>
+4. Браузер получает PDF (или другой тип) потоком с Flask, без прямого presigned
+   запроса к Selectel от имени браузера.
+
+
+================================================================================
+Конец файла
+================================================================================
