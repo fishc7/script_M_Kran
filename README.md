@@ -19,3 +19,5 @@
 - `scripts/tools/copy_table_to_correct_db.py`
 - `scripts/tools/restore_database.py`
 - `scripts/tools/load_naks_to_db.py`
+
+Прямые root-скрипты `restore_database.py` и `load_naks_to_db.py` удалены: используйте версии из `scripts/tools/`.
