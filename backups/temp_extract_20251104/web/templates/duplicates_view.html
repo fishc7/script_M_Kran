@@ -1,0 +1,1158 @@
+{% extends "base.html" %}
+
+{% block title %}{{ table_title }} - Дубликаты{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Стили для подсветки найденного текста */
+    .highlight {
+        background-color: #ffeb3b;
+        color: #000;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-weight: bold;
+    }
+    
+    /* Стили для поля поиска */
+    #tableFilter {
+        border-radius: 0.375rem 0 0 0.375rem;
+    }
+    
+    #tableFilter:focus {
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        border-color: #dc3545;
+    }
+    
+    /* Анимация для сообщения об отсутствии результатов */
+    #noResults {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">
+                    <i class="fas fa-copy me-2"></i>
+                    Дубликаты: {{ table_title }}
+                </h2>
+                <div>
+                    <a href="{{ url_for('export_table', table_name=table_name) }}" class="btn btn-success">
+                        <i class="fas fa-download me-1"></i>Экспорт в Excel
+                    </a>
+                    <a href="{{ url_for('duplicates') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Назад
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-0">
+                            <strong>Всего дубликатов:</strong> {{ total_records|format_number }}
+                        </p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <p class="mb-0">
+                            <strong>Страница:</strong> {{ page }} из {{ total_pages }}
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Search and Filter Controls -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="tableFilter" placeholder="Поиск в таблице..." autocomplete="off">
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearFilter()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="d-flex align-items-center justify-content-end">
+                            <span class="text-muted me-3">
+                                Показано: <span id="filteredCount">{{ records|length if records else 0 }}</span> из {{ total_records | format_number }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Results Message -->
+                <div id="noResults" class="alert alert-info text-center" style="display: none;">
+                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                    <h5>Результаты не найдены</h5>
+                    <p class="text-muted">Попробуйте изменить поисковый запрос</p>
+                </div>
+                
+                {% if records %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    {% for column in columns %}
+                                    <th>{{ column }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in records %}
+                                <tr>
+                                    {% for column in columns %}
+                                    <td>
+                                        {% if record[column] is none %}
+                                            <span class="text-muted">NULL</span>
+                                        {% elif column.lower() == 'full_path' and record[column] %}
+                                            {% set value_str = record[column]|string %}
+                                            {% set file_name = value_str.split('\\')[-1] if '\\' in value_str else value_str.split('/')[-1] %}
+                                            <div class="d-flex align-items-center">
+                                                <span class="me-2 text-muted" style="font-size: 0.8em;">{{ file_name }}</span>
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        onclick="openFile('{{ value_str|replace('\\', '/')|replace("'", "\\'") }}')" 
+                                                        title="Открыть файл: {{ value_str }}">
+                                                    <i class="fas fa-external-link-alt"></i>
+                                                </button>
+                                            </div>
+                                        {% elif record[column]|string|length > 100 %}
+                                            <span title="{{ record[column] }}">
+                                                {{ record[column]|string|truncate(100) }}
+                                            </span>
+                                        {% else %}
+                                            {{ record[column] }}
+                                        {% endif %}
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Пагинация -->
+                    {% if total_pages > 1 %}
+                    <nav aria-label="Навигация по страницам">
+                        <ul class="pagination justify-content-center">
+                            {% if page > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('view_duplicates', table_name=table_name, page=page-1) }}">
+                                    <i class="fas fa-chevron-left"></i> Предыдущая
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for p in range(max(1, page-2), min(total_pages+1, page+3)) %}
+                            <li class="page-item {% if p == page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('view_duplicates', table_name=table_name, page=p) }}">
+                                    {{ p }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                            
+                            {% if page < total_pages %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('view_duplicates', table_name=table_name, page=page+1) }}">
+                                    Следующая <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        В таблице дубликатов нет данных для отображения.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Информация о дубликатах -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Информация о дубликатах
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li><strong>Таблица:</strong> {{ table_name }}</li>
+                    <li><strong>Всего дубликатов:</strong> {{ total_records|format_number }}</li>
+                    <li><strong>Столбцов:</strong> {{ columns|length }}</li>
+                    <li><strong>Записей на странице:</strong> 100</li>
+                </ul>
+                
+                {% if 'wl_report_smr' in table_name %}
+                <div class="alert alert-info mt-3">
+                    <h6><i class="fas fa-info-circle me-2"></i>Дубликаты отчетов от мастеров (SMR)</h6>
+                    <p class="mb-0">Эта таблица содержит дубликаты сварных швов из отчетов мастеров.</p>
+                </div>
+                {% elif 'wl_china' in table_name %}
+                <div class="alert alert-info mt-3">
+                    <h6><i class="fas fa-info-circle me-2"></i>Дубликаты WELDLOG китайский</h6>
+                    <p class="mb-0">Эта таблица содержит дубликаты сварных швов из китайской системы WELDLOG.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>
+                    Действия
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('export_table', table_name=table_name) }}" class="btn btn-success">
+                        <i class="fas fa-download me-1"></i>Экспорт в Excel
+                    </a>
+                    <button class="btn btn-info" onclick="getTableInfo('{{ table_name }}')">
+                        <i class="fas fa-info-circle me-1"></i>Подробная информация
+                    </button>
+                    <button class="btn btn-warning" onclick="showExtractNumbersModal()">
+                        <i class="fas fa-calculator me-1"></i>Извлечь числа из номера
+                    </button>
+                    {% if 'wl_china' in table_name %}
+                    <button class="btn btn-primary" onclick="processWlChinaNumbers()">
+                        <i class="fas fa-database me-1"></i>Обработать wl_china
+                    </button>
+                    {% endif %}
+                    <a href="{{ url_for('duplicates') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>К списку дубликатов
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно с информацией о таблице -->
+<div class="modal fade" id="tableInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Информация о таблице дубликатов
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="tableInfoContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для извлечения чисел из номера -->
+<div class="modal fade" id="extractNumbersModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-calculator me-2"></i>
+                    Извлечение чисел из таблиц
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Основная панель выбора таблицы -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-table me-2"></i>Выбор таблицы для обработки</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="tableName" class="form-label fw-bold">
+                                                <i class="fas fa-database me-1"></i>Выберите таблицу:
+                                            </label>
+                                            <select class="form-select" id="tableName" onchange="loadTableColumns(this.value)">
+                                                <option value="">Выберите таблицу...</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="extractMode" class="form-label fw-bold">
+                                                <i class="fas fa-cogs me-1"></i>Режим обработки:
+                                            </label>
+                                            <select class="form-select" id="extractMode">
+                                                <option value="all">🔄 Все режимы</option>
+                                                <option value="simple">🔍 Простое извлечение чисел</option>
+                                                <option value="clean">🧹 Удаление префиксов S/F</option>
+                                                <option value="combined">✨ Комбинированный режим</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="sourceColumn" class="form-label fw-bold">
+                                                <i class="fas fa-columns me-1"></i>Исходный столбец:
+                                            </label>
+                                            <select class="form-select" id="sourceColumn" onchange="updateTargetColumn()">
+                                                <option value="">Сначала выберите таблицу...</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="targetColumn" class="form-label fw-bold">
+                                                <i class="fas fa-arrow-right me-1"></i>Целевой столбец:
+                                            </label>
+                                            <input type="text" class="form-control" id="targetColumn" 
+                                                   placeholder="Автоматически заполнится..." readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-primary btn-lg" onclick="processTable()">
+                                        <i class="fas fa-play me-1"></i>Обработать таблицу
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Результаты обработки -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Результаты обработки</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="tableProcessResult" class="text-center text-muted">
+                                    <i class="fas fa-play-circle fa-2x mb-2"></i>
+                                    <p class="mb-0">Выберите таблицу и нажмите "Обработать таблицу" для получения результатов</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Информация о режимах -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>Информация о режимах обработки
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="text-primary mb-3">
+                                            <i class="fas fa-flask me-1"></i>Примеры обработки:
+                                        </h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Исходное значение</th>
+                                                        <th>Результат</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td><code>S123</code></td>
+                                                        <td><span class="badge bg-success">123</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>F456</code></td>
+                                                        <td><span class="badge bg-success">456</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>S001</code></td>
+                                                        <td><span class="badge bg-success">1</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>Стык 123-45</code></td>
+                                                        <td><span class="badge bg-success">123</span></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-info mb-3">
+                                            <i class="fas fa-cogs me-1"></i>Режимы обработки:
+                                        </h6>
+                                        <div class="alert alert-info">
+                                            <ul class="mb-0">
+                                                <li><strong>Простое извлечение:</strong> Находит первое число в тексте</li>
+                                                <li><strong>Удаление префиксов:</strong> Убирает S/F и ведущие нули</li>
+                                                <li><strong>Комбинированный:</strong> Применяет все методы очистки</li>
+                                                <li><strong>Все режимы:</strong> Создает отдельные столбцы для каждого режима</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Закрыть
+                </button>
+                <button type="button" class="btn btn-outline-primary" onclick="clearTableForm()">
+                    <i class="fas fa-eraser me-1"></i>Очистить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для обработки таблиц -->
+<div class="modal fade" id="tableProcessingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-table me-2"></i>
+                    Обработка таблицы
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="tableName" class="form-label">Таблица:</label>
+                            <select class="form-select" id="tableName">
+                                <option value="">Выберите таблицу...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="sourceColumn" class="form-label">Исходный столбец:</label>
+                            <select class="form-select" id="sourceColumn">
+                                <option value="">Сначала выберите таблицу...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="targetColumn" class="form-label">Целевой столбец:</label>
+                            <input type="text" class="form-control" id="targetColumn" placeholder="Автоматически">
+                        </div>
+                        <div class="mb-3">
+                            <label for="tableMode" class="form-label">Режим обработки:</label>
+                            <select class="form-select" id="tableMode">
+                                <option value="combined">Комбинированный (рекомендуется)</option>
+                                <option value="simple">Простое извлечение чисел</option>
+                                <option value="clean">Удаление префиксов S/F</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="processTable()">
+                            <i class="fas fa-cogs me-1"></i>Обработать таблицу
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Результат:</label>
+                            <div id="tableProcessResult" class="border rounded p-3 bg-light">
+                                <p class="text-muted mb-0">Результат появится здесь после обработки</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Функция для открытия файлов
+function openFile(filePath) {
+    try {
+        // Проверяем, что путь к файлу существует
+        if (!filePath || filePath.trim() === '') {
+            showNotification('❌ Путь к файлу не указан');
+            return;
+        }
+        
+        const fileName = filePath.split('\\').pop().split('/').pop();
+        
+        // Показываем уведомление о попытке открытия
+        showNotification(`🔍 Открываю файл: ${fileName}`);
+        
+        // Отправляем запрос на сервер для открытия файла
+        fetch(`/api/open_file?path=${encodeURIComponent(filePath)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`✅ ${data.message}`);
+                } else {
+                    showNotification(`❌ ${data.error}`);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при открытии файла:', error);
+                showNotification(`❌ Ошибка соединения с сервером`);
+            });
+        
+    } catch (error) {
+        console.error('Ошибка при открытии файла:', error);
+        showNotification(`❌ Ошибка: ${error.message}`);
+    }
+}
+
+// Функция показа уведомления
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    
+    // Убираем уведомление через 3 секунды
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+
+
+function getTableInfo(tableName) {
+    showLoading();
+    
+    fetch(`/api/table_info/${tableName}`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            
+            if (data.error) {
+                document.getElementById('tableInfoContent').innerHTML = 
+                    `<div class="alert alert-danger">${data.error}</div>`;
+            } else {
+                let columnsHtml = '';
+                data.columns.forEach(col => {
+                    columnsHtml += `
+                        <tr>
+                            <td><code>${col.name}</code></td>
+                            <td><span class="badge bg-secondary">${col.type}</span></td>
+                        </tr>
+                    `;
+                });
+                
+                document.getElementById('tableInfoContent').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Основная информация</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Название:</strong> ${data.table_name}</li>
+                                <li><strong>Дубликатов:</strong> ${data.total_records.toLocaleString()}</li>
+                                <li><strong>Столбцов:</strong> ${data.columns.length}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Действия</h6>
+                            <div class="d-grid gap-2">
+                                <a href="/export/${data.table_name}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-download me-1"></i>Экспорт в Excel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Структура таблицы</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Столбец</th>
+                                    <th>Тип</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${columnsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            new bootstrap.Modal(document.getElementById('tableInfoModal')).show();
+        })
+        .catch(error => {
+            hideLoading();
+            document.getElementById('tableInfoContent').innerHTML = 
+                `<div class="alert alert-danger">Ошибка загрузки информации: ${error}</div>`;
+            new bootstrap.Modal(document.getElementById('tableInfoModal')).show();
+        });
+}
+
+function showExtractNumbersModal() {
+    const modal = new bootstrap.Modal(document.getElementById('extractNumbersModal'));
+    modal.show();
+    
+    // Загружаем список таблиц после показа модального окна
+    setTimeout(() => {
+        console.log('Загружаем таблицы после показа модального окна...');
+        loadTables();
+    }, 200);
+}
+
+function extractNumber() {
+    const inputText = document.getElementById('inputText').value.trim();
+    const extractMode = document.getElementById('extractMode').value;
+    const resultDiv = document.getElementById('extractResult');
+    
+    if (!inputText) {
+        resultDiv.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Внимание!</strong> Пожалуйста, введите текст для обработки
+            </div>
+        `;
+        return;
+    }
+    
+    // Показываем индикатор загрузки
+    resultDiv.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Обработка...</span>
+            </div>
+            <p class="mt-2 mb-0">Обрабатываем текст...</p>
+        </div>
+    `;
+    
+    // Отправляем запрос на сервер
+    fetch('/api/extract_numbers', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+            text: inputText,
+            mode: extractMode
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Ошибка!</strong> ${data.error}
+                </div>
+            `;
+        } else {
+            let resultHtml = '';
+            
+            // Заголовок с исходным текстом
+            resultHtml += `
+                <div class="alert alert-secondary mb-3">
+                    <h6><i class="fas fa-file-text me-2"></i>Исходный текст:</h6>
+                    <code class="fs-6">${inputText}</code>
+                </div>
+            `;
+            
+            // Результаты по режимам
+            if (data.mode === 'all' || data.mode === 'simple') {
+                const extractedNumber = data.extracted_number;
+                if (extractedNumber) {
+                    resultHtml += `
+                        <div class="card border-success mb-3">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-search me-2"></i>Простое извлечение</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-success fs-5 me-3">${extractedNumber}</span>
+                                    <div>
+                                        <strong>Найдено число:</strong> ${extractedNumber}
+                                        <br><small class="text-muted">Первое число в тексте</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultHtml += `
+                        <div class="card border-info mb-3">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Простое извлечение</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-0 text-muted">Число не найдено в тексте</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            if (data.mode === 'all' || data.mode === 'clean') {
+                const cleanedNumber = data.cleaned_number;
+                if (cleanedNumber) {
+                    resultHtml += `
+                        <div class="card border-warning mb-3">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0"><i class="fas fa-broom me-2"></i>Удаление префиксов S/F</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-warning text-dark fs-5 me-3">${cleanedNumber}</span>
+                                    <div>
+                                        <strong>Очищенное число:</strong> ${cleanedNumber}
+                                        <br><small class="text-muted">Убраны префиксы и ведущие нули</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultHtml += `
+                        <div class="card border-info mb-3">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Удаление префиксов S/F</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-0 text-muted">Результат пустой после очистки</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            if (data.mode === 'all' || data.mode === 'combined') {
+                const combinedNumber = data.combined_number;
+                if (combinedNumber) {
+                    resultHtml += `
+                        <div class="card border-primary mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-magic me-2"></i>Комбинированный режим</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-primary fs-5 me-3">${combinedNumber}</span>
+                                    <div>
+                                        <strong>Финальный результат:</strong> ${combinedNumber}
+                                        <br><small class="text-muted">Применены все методы очистки</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultHtml += `
+                        <div class="card border-info mb-3">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Комбинированный режим</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-0 text-muted">Число не найдено после всех преобразований</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Добавляем кнопки действий
+            resultHtml += `
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-outline-primary btn-sm" onclick="copyToClipboard('${data.extracted_number || data.cleaned_number || data.combined_number || ''}')">
+                        <i class="fas fa-copy me-1"></i>Копировать результат
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="clearExtractionForm()">
+                        <i class="fas fa-eraser me-1"></i>Очистить форму
+                    </button>
+                </div>
+            `;
+            
+            resultDiv.innerHTML = resultHtml;
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Сетевая ошибка!</strong> ${error.message}
+            </div>
+        `;
+    });
+}
+
+function showTableProcessingModal() {
+    // Загружаем список таблиц
+    loadTables();
+    
+    // Показываем модальное окно
+    new bootstrap.Modal(document.getElementById('tableProcessingModal')).show();
+}
+
+// Добавляем обработчики событий
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработчик изменения таблицы
+    const tableSelect = document.getElementById('tableName');
+    if (tableSelect) {
+        tableSelect.addEventListener('change', function() {
+            loadTableColumns(this.value);
+            
+            // Устанавливаем фиксированное имя целевого столбца
+            const targetColumn = document.getElementById('targetColumn');
+            targetColumn.value = '_Номер_стыка_без S/F_';
+        });
+    }
+    
+    // Обработчик изменения исходного столбца
+    const sourceColumnSelect = document.getElementById('sourceColumn');
+    if (sourceColumnSelect) {
+        sourceColumnSelect.addEventListener('change', function() {
+            // Устанавливаем фиксированное имя целевого столбца
+            const targetColumn = document.getElementById('targetColumn');
+            targetColumn.value = '_Номер_стыка_без S/F_';
+        });
+    }
+});
+
+// Функция загрузки таблиц
+function loadTables() {
+    console.log('Загружаем список таблиц...');
+    
+    fetch('/api/table_info')
+        .then(response => {
+            console.log('Ответ получен:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Данные получены:', data);
+            
+            const tableSelect = document.getElementById('tableName');
+            if (tableSelect && data.tables) {
+                tableSelect.innerHTML = '<option value="">Выберите таблицу...</option>';
+                data.tables.forEach(table => {
+                    tableSelect.innerHTML += `<option value="${table.name}">${table.name} (${table.record_count} записей)</option>`;
+                });
+                console.log(`Загружено ${data.tables.length} таблиц`);
+            } else {
+                console.error('Элемент tableName не найден или данные пусты');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки таблиц:', error);
+        });
+}
+
+// Функция обновления целевого столбца
+function updateTargetColumn() {
+    const targetColumn = document.getElementById('targetColumn');
+    // Фиксированное имя целевого столбца
+    targetColumn.value = '_Номер_стыка_без S/F_';
+}
+
+// Функция загрузки столбцов таблицы
+function loadTableColumns(tableName) {
+    console.log('Загружаем столбцы для таблицы:', tableName);
+    
+    if (!tableName) {
+        document.getElementById('sourceColumn').innerHTML = '<option value="">Сначала выберите таблицу...</option>';
+        document.getElementById('targetColumn').value = '';
+        return;
+    }
+    
+    fetch(`/api/get_table_columns/${tableName}`)
+        .then(response => {
+            console.log('Ответ для столбцов получен:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Данные столбцов получены:', data);
+            
+            const columnSelect = document.getElementById('sourceColumn');
+            if (columnSelect && data.columns) {
+                columnSelect.innerHTML = '<option value="">Выберите столбец...</option>';
+                data.columns.forEach(col => {
+                    columnSelect.innerHTML += `<option value="${col.name}">${col.name} (${col.type})</option>`;
+                });
+                console.log(`Загружено ${data.columns.length} столбцов`);
+                
+                // Устанавливаем фиксированное имя целевого столбца
+                document.getElementById('targetColumn').value = '_Номер_стыка_без S/F_';
+            } else {
+                console.error('Элемент sourceColumn не найден или данные пусты');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки столбцов:', error);
+            const columnSelect = document.getElementById('sourceColumn');
+            if (columnSelect) {
+                columnSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+            }
+        });
+}
+
+// Функция обработки таблицы
+function processTable() {
+    const tableName = document.getElementById('tableName').value;
+    const sourceColumn = document.getElementById('sourceColumn').value;
+    const targetColumn = document.getElementById('targetColumn').value;
+    const mode = document.getElementById('extractMode').value;
+    const resultDiv = document.getElementById('tableProcessResult');
+    
+    if (!tableName || !sourceColumn) {
+        resultDiv.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Внимание!</strong> Пожалуйста, выберите таблицу и исходный столбец
+            </div>
+        `;
+        return;
+    }
+    
+    // Показываем индикатор загрузки
+    resultDiv.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Обработка...</span>
+            </div>
+            <p class="mt-2 mb-0">Обрабатываем таблицу...</p>
+        </div>
+    `;
+    
+    // Отправляем запрос на сервер
+    fetch('/api/process_table_numbers', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            table_name: tableName,
+            source_column: sourceColumn,
+            target_column: targetColumn || '_Номер_стыка_без S/F_',
+            mode: mode
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Ошибка!</strong> ${data.error}
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-check-circle me-2"></i>Таблица успешно обработана!</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Таблица:</strong> ${data.table_name}</p>
+                            <p class="mb-1"><strong>Исходный столбец:</strong> ${data.source_column}</p>
+                            <p class="mb-1"><strong>Целевой столбец:</strong> ${data.target_column}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Режим:</strong> ${data.mode}</p>
+                            <p class="mb-1"><strong>Обработано записей:</strong> ${data.updated_records} из ${data.total_records}</p>
+                            <p class="mb-0"><strong>Сообщение:</strong> ${data.message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Сетевая ошибка!</strong> ${error.message}
+            </div>
+        `;
+    });
+}
+
+// Функция очистки формы
+function clearTableForm() {
+    document.getElementById('tableName').value = '';
+    document.getElementById('sourceColumn').innerHTML = '<option value="">Сначала выберите таблицу...</option>';
+    document.getElementById('targetColumn').value = '';
+    document.getElementById('extractMode').value = 'all';
+    document.getElementById('tableProcessResult').innerHTML = `
+        <div class="text-center text-muted">
+            <i class="fas fa-play-circle fa-2x mb-2"></i>
+            <p class="mb-0">Выберите таблицу и нажмите "Обработать таблицу" для получения результатов</p>
+        </div>
+    `;
+}
+
+// Функция копирования в буфер обмена
+function copyToClipboard(text) {
+    if (!text) {
+        showAlert('warning', 'Нет текста для копирования');
+        return;
+    }
+    
+    navigator.clipboard.writeText(text).then(() => {
+        showAlert('success', `Скопировано: ${text}`);
+    }).catch(() => {
+        // Fallback для старых браузеров
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showAlert('success', `Скопировано: ${text}`);
+    });
+}
+
+// Переменная для хранения оригинальных данных таблицы
+let originalTableData = [];
+
+// Функции для фильтрации в реальном времени
+function initializeFilter() {
+    // Сохраняем оригинальные данные таблицы
+    const rows = document.querySelectorAll('table tbody tr');
+    originalTableData = Array.from(rows).map(row => {
+        const cells = row.querySelectorAll('td');
+        return {
+            element: row,
+            text: Array.from(cells).map(cell => cell.textContent || cell.innerText).join(' ').toLowerCase()
+        };
+    });
+    
+    // Добавляем обработчик события для поля поиска
+    const filterInput = document.getElementById('tableFilter');
+    if (filterInput) {
+        filterInput.addEventListener('input', function() {
+            filterTable(this.value);
+        });
+        
+        // Добавляем обработчик для клавиши Escape
+        filterInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                clearFilter();
+            }
+        });
+    }
+}
+
+function filterTable(searchTerm) {
+    const searchLower = searchTerm.toLowerCase();
+    const rows = document.querySelectorAll('table tbody tr');
+    const noResults = document.getElementById('noResults');
+    let visibleCount = 0;
+    
+    rows.forEach((row, index) => {
+        const rowData = originalTableData[index];
+        const cells = row.querySelectorAll('td');
+        
+        if (searchTerm === '') {
+            // Показываем все строки и убираем подсветку
+            row.style.display = '';
+            cells.forEach(cell => {
+                cell.innerHTML = cell.innerHTML.replace(/<span class="highlight">(.*?)<\/span>/g, '$1');
+            });
+            visibleCount++;
+        } else {
+            // Проверяем, содержит ли строка поисковый термин
+            if (rowData && rowData.text && rowData.text.includes(searchLower)) {
+                row.style.display = '';
+                visibleCount++;
+                
+                // Подсвечиваем найденный текст
+                cells.forEach(cell => {
+                    const originalText = cell.textContent || cell.innerText;
+                    const highlightedText = highlightText(originalText, searchTerm);
+                    if (highlightedText !== originalText) {
+                        cell.innerHTML = highlightedText;
+                    }
+                });
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    });
+    
+    // Обновляем статистику
+    updateFilterStats(visibleCount, rows.length);
+    
+    // Показываем/скрываем сообщение об отсутствии результатов
+    if (visibleCount === 0 && searchTerm !== '') {
+        noResults.style.display = 'block';
+    } else {
+        noResults.style.display = 'none';
+    }
+}
+
+function highlightText(text, searchTerm) {
+    if (!searchTerm) return text;
+    
+    const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+    return text.replace(regex, '<span class="highlight">$1</span>');
+}
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function updateFilterStats(visible, total) {
+    const statsElement = document.getElementById('filteredCount');
+    if (statsElement) {
+        statsElement.textContent = visible;
+    }
+}
+
+function clearFilter() {
+    const filterInput = document.getElementById('tableFilter');
+    if (filterInput) {
+        filterInput.value = '';
+        filterTable('');
+        filterInput.focus();
+    }
+}
+
+// Инициализация фильтрации при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    initializeFilter();
+});
+</script>
+{% endblock %} 

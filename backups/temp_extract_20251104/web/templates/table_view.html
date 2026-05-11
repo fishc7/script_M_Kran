@@ -1,0 +1,4702 @@
+{% extends "base.html" %}
+
+{% block title %}{{ table_title }} - M_Kran Web Interface{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .controls-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    /* Улучшенные стили для кнопок */
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        border-radius: 0.375rem;
+        white-space: nowrap;
+    }
+    
+    .btn-sm i {
+        font-size: 0.8rem;
+    }
+    
+    /* Компактные кнопки с минимальными отступами */
+    .d-flex.gap-1 .btn {
+        margin-right: 0.25rem;
+    }
+    
+    .d-flex.gap-1 .btn:last-child {
+        margin-right: 0;
+    }
+    
+    .search-box {
+        border-radius: 25px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .search-box:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .data-table {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .table th {
+        background: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.9rem;
+        padding: 1rem 0.75rem;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .table td {
+        padding: 0.75rem;
+        font-size: 0.85rem;
+        vertical-align: middle;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(102, 126, 234, 0.05);
+    }
+    
+    /* Подсветка строк с заполненной датой ремонта */
+    .table-hover tbody tr.repaired-row {
+        background-color: rgba(40, 167, 69, 0.3) !important;
+    }
+    
+    .table-hover tbody tr.repaired-row:hover {
+        background-color: rgba(40, 167, 69, 0.4) !important;
+    }
+    
+    .table-hover tbody tr.repaired-row td {
+        background-color: rgba(40, 167, 69, 0.3) !important;
+    }
+    
+    .table-hover tbody tr.repaired-row:hover td {
+        background-color: rgba(40, 167, 69, 0.4) !important;
+    }
+    
+    /* Подсветка строк без даты сварки */
+    .table-hover tbody tr.no-weld-date-row {
+        background-color: rgba(220, 53, 69, 0.3) !important;
+    }
+    
+    .table-hover tbody tr.no-weld-date-row:hover {
+        background-color: rgba(220, 53, 69, 0.4) !important;
+    }
+    
+    .table-hover tbody tr.no-weld-date-row td {
+        background-color: rgba(220, 53, 69, 0.3) !important;
+    }
+    
+    .table-hover tbody tr.no-weld-date-row:hover td {
+        background-color: rgba(220, 53, 69, 0.4) !important;
+    }
+    
+    .back-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .back-button:hover {
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    /* Стили для селектора столбцов */
+    .column-selector {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+    }
+    
+    /* Стили для авторазмера таблиц */
+    .data-table {
+        table-layout: auto;
+        width: 100%;
+    }
+    
+    .data-table th {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 0;
+    }
+    
+    .data-table td {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 0;
+        vertical-align: top;
+        padding: 0.75rem;
+        line-height: 1.4;
+        position: relative;
+    }
+    
+    /* Подсказка при наведении на ячейки с обрезанным текстом */
+    .data-table td:hover {
+        overflow: visible;
+        z-index: 1000;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        border-radius: 4px;
+    }
+    
+    /* Специальные стили для столбцов с датами */
+    .data-table td[data-column*="Дата"] {
+        min-width: 120px !important;
+        white-space: nowrap !important;
+        text-align: center;
+    }
+    
+    .data-table th[data-column*="Дата"] {
+        min-width: 120px !important;
+        white-space: nowrap !important;
+        text-align: center;
+    }
+    
+    /* Стили для перетаскивания ширины столбцов */
+    .data-table th {
+        position: relative;
+        user-select: none;
+    }
+    
+    .column-resizer {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 5px;
+        background: transparent;
+        cursor: col-resize;
+        z-index: 1000;
+    }
+    
+    .column-resizer:hover {
+        background: #007bff;
+        opacity: 0.5;
+    }
+    
+    .column-resizer.active {
+        background: #007bff;
+        opacity: 0.8;
+    }
+    
+    /* Стили для чекбоксов */
+    .checkbox-cell {
+        text-align: center;
+        width: 50px;
+    }
+    
+    .record-checkbox {
+        cursor: pointer;
+        transform: scale(1.2);
+    }
+    
+    #select-all-checkbox {
+        cursor: pointer;
+        transform: scale(1.2);
+    }
+    
+    /* Стили для кнопки переноса */
+    #transfer-selected-btn {
+        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    #transfer-selected-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+        color: white;
+    }
+    
+    /* Стили для индикатора изменения размера */
+    .resize-indicator {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 2px;
+        height: 100vh;
+        background: #007bff;
+        pointer-events: none;
+        z-index: 9999;
+        display: none;
+    }
+    
+    .data-table th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #f8f9fa;
+    }
+    
+    /* Контейнер для таблицы с горизонтальной прокруткой */
+    .table-container {
+        overflow-x: auto;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    /* Стили для пагинации */
+    .pagination-controls {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+    }
+    
+    .pagination-container {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+    }
+    
+    .pagination .page-link {
+        border: none;
+        color: #667eea;
+        padding: 0.5rem 0.75rem;
+        margin: 0 2px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .pagination .page-link:hover {
+        background-color: #667eea;
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+        background-color: transparent;
+        border: none;
+    }
+    
+    #per_page_select {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 0.2rem 1rem 0.2rem 0.4rem;
+        transition: all 0.3s ease;
+        background-color: white;
+        color: #495057;
+        font-weight: 500;
+        width: 70px !important;
+        min-width: unset !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m1 6 7 7 7-7'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 0.3rem center;
+        background-size: 16px 12px;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+    
+    #per_page_select:hover {
+        border-color: #667eea;
+        background-color: #f8f9fa;
+    }
+    
+    #per_page_select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        background-color: white;
+        outline: none;
+    }
+    
+    /* Стили для опций в селекторе */
+    #per_page_select option {
+        background-color: white;
+        color: #495057;
+        padding: 0.5rem;
+        font-weight: 500;
+    }
+    
+    /* Улучшенный стиль для лейбла */
+    .per-page-label {
+        color: #6c757d;
+        font-weight: 500;
+        font-size: 0.9rem;
+        margin-right: 0.75rem;
+        white-space: nowrap;
+    }
+    
+    .column-item {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        margin: 5px 0;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background-color: #f8f9fa;
+    }
+    
+    .column-item:hover {
+        background-color: #e9ecef;
+    }
+    
+    /* Стили для фильтров столбцов */
+    .column-filter-row {
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .filter-container {
+        padding: 0.5rem;
+        position: relative;
+    }
+    
+    .filter-input-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 110px;   /* можно сжимать сильнее */
+        padding-right: 40px; /* резерв под селект + крестик */
+    }
+    
+    .filter-type-select {
+        width: 24px;               /* показываем только стрелку */
+        height: 25px;
+        padding: 0 0 0 18px;       /* место под стрелку слева */
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        background-color: #ffffff;
+        font-size: 0;              /* прячем текст выбранного пункта */
+        color: transparent;        /* перестраховка */
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 0.1rem;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='18 8 12 14 6 8'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: 4px center;  /* стрелка слева */
+        background-size: 9px;
+        text-align: left;
+    }
+    
+    .filter-type-select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.25);
+    }
+    
+    .filter-type-select:hover {
+        border-color: #667eea;
+    }
+    
+    .filter-type-select option {
+        padding: 0.35rem 0.5rem;
+        font-size: 0.78rem;
+        color: #495057;
+        background: white;
+        min-height: 24px;
+        line-height: 1.4;
+    }
+    
+    .column-filter {
+        padding: 4px 6px;
+        border: 1px solid #dee2e6;
+        background: white;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        width: 0;                 /* разрешаем сжиматься */
+        transition: all 0.2s ease;
+        flex: 1 1 0;              /* сжимается до нуля при нехватке места */
+        min-width: 50px;          /* минимальная видимая ширина */
+        height: 25px;              /* вместо 40 */
+        box-sizing: border-box;
+    }
+    
+    .column-filter:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.25);
+        border-color: #667eea;
+    }
+    
+    .column-filter:disabled {
+        background: #f8f9fa;
+        color: #6c757d;
+        cursor: not-allowed;
+    }
+    
+    .filter-icon {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        cursor: pointer;
+        font-size: 0.8rem;
+        padding: 4px;
+        border-radius: 3px;
+        transition: all 0.2s ease;
+        z-index: 10;
+    }
+    
+    .filter-icon:hover {
+        color: #667eea;
+        background-color: rgba(102, 126, 234, 0.1);
+    }
+    
+    .filter-icon.active {
+        color: #667eea;
+        background-color: rgba(102, 126, 234, 0.2);
+    }
+    
+    .filter-type-menu {
+        position: fixed !important;
+        background: white !important;
+        border: 3px solid #ff0000 !important;
+        border-radius: 8px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5) !important;
+        z-index: 999999 !important;
+        min-width: 200px;
+        display: block !important;
+        max-height: 250px;
+        overflow-y: auto;
+        opacity: 0;
+        visibility: hidden;
+    }
+    
+    .filter-type-menu.show {
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .filter-type-option {
+        padding: 10px 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+        color: #495057;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #f8f9fa;
+        white-space: nowrap;
+        min-height: 20px;
+    }
+    
+    .filter-type-option:last-child {
+        border-bottom: none;
+    }
+    
+    .filter-type-option:hover {
+        background-color: #f8f9fa;
+        color: #667eea;
+        transform: translateX(2px);
+    }
+    
+    .filter-type-option i {
+        margin-right: 10px;
+        width: 16px;
+        text-align: center;
+        font-size: 0.9rem;
+    }
+    
+    .filter-type-option.selected {
+        background-color: #667eea;
+        color: white;
+        font-weight: 500;
+    }
+    
+    .filter-type-option.selected:hover {
+        background-color: #5a6fd8;
+        color: white;
+        transform: translateX(2px);
+    }
+    
+    .filter-container {
+        position: relative;
+        padding: 0.5rem 0.75rem;
+        overflow: visible;
+    }
+    
+    .filter-active {
+        background-color: #e3f2fd;
+        border-left: 3px solid #667eea;
+    }
+    
+    .filter-clear-btn {
+        position: absolute;
+        right: 36px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        font-size: 0.7rem;
+        padding: 2px;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .filter-clear-btn:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="table-header">
+    <h1 class="display-5 mb-3">
+        <i class="fas fa-table me-3"></i>
+        {{ table_title }}
+    </h1>
+    <p class="lead mb-0">
+        Просмотр данных таблицы
+        {% if table_name == 'condition_weld' %}
+        <br><small class="text-info">
+            <i class="fas fa-edit me-1"></i>
+            Двойной клик по ячейке для редактирования данных
+        </small>
+        {% elif table_name == 'слов_клейм_факт' %}
+        <br><small class="text-info">
+            <i class="fas fa-edit me-1"></i>
+            Поставьте галочку для редактирования полей ФИО и Примечание
+        </small>
+        {% endif %}
+    </p>
+</div>
+
+<!-- Navigation -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        {% if table_name in ['logs_lnk', 'wl_china', 'weld_repair_log', 'nk_results', 'condition_weld'] %}
+        <a href="{{ url_for('logs') }}" class="back-button">
+            <i class="fas fa-arrow-left me-2"></i>
+            Назад к журналам
+        </a>
+        {% else %}
+        <a href="{{ url_for('database') }}" class="back-button">
+            <i class="fas fa-arrow-left me-2"></i>
+            Назад к базе данных
+        </a>
+        {% endif %}
+    </div>
+    <div class="col-md-6 text-end">
+        <div class="stats-card d-inline-block">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-list-ol fa-2x text-primary me-3"></i>
+                <div>
+                    <div class="h4 mb-0">{{ total_records | format_number }}</div>
+                    <div class="text-muted small">Всего записей</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Controls Panel -->
+<div class="controls-panel">
+    <div class="row">
+        <!-- Search -->
+        <div class="col-md-6 mb-3">
+            <form method="GET" action="{{ url_for('view_table', table_name=table_name) }}" id="searchForm">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" name="search" 
+                           value="{{ search_term }}" placeholder="Поиск..." autocomplete="off">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" onclick="clearSearch()" title="Очистить поиск">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <!-- Скрытые поля для сохранения состояния -->
+                <input type="hidden" name="columns" value="{{ selected_columns | join(',') }}">
+            </form>
+            <small class="text-muted mt-1">
+                <i class="fas fa-info-circle me-1"></i>
+                Поиск без учета регистра
+            </small>
+        </div>
+        
+        <!-- Column Management -->
+        <div class="col-md-6 mb-3">
+            <div class="d-flex gap-1 flex-wrap">
+                <button class="btn btn-outline-primary btn-sm flex-fill" type="button" data-bs-toggle="collapse" data-bs-target="#columnSelector">
+                    <i class="fas fa-columns me-1"></i>
+                    Столбцы ({{ selected_columns | length }}/{{ all_columns | length }})
+                </button>
+                <button class="btn btn-success btn-sm" type="button" onclick="exportFilteredToExcel()" title="Экспорт в Excel">
+                    <i class="fas fa-file-excel me-1"></i>
+                    Экспорт
+                </button>
+                
+                {% if table_name == 'weld_repair_log' %}
+                <button class="btn btn-primary btn-sm" type="button" onclick="importFromExcel()" title="Импорт из Excel">
+                    <i class="fas fa-file-import me-1"></i>
+                    Импорт
+                </button>
+                {% endif %}
+
+                {% if table_name == 'weld_repair_log' %}
+                <button id="edit-selected-btn" class="btn btn-warning btn-sm" style="display: none;" onclick="editSelectedRecord()">
+                    <i class="fas fa-edit me-1"></i>
+                    Редактировать
+                </button>
+                {% endif %}
+
+                {% if table_name == 'logs_lnk' %}
+                <button id="transfer-selected-btn" class="btn btn-warning btn-sm" style="display: none;" onclick="transferSelectedToRepairLog()">
+                    <i class="fas fa-exchange-alt me-1"></i>
+                    Перенести (<span id="selected-count">0</span>)
+                </button>
+                {% endif %}
+
+                {% if table_name == 'condition_weld' %}
+                <button id="delete-selected-pipeline-btn" class="btn btn-danger btn-sm" style="display: none;" onclick="deleteSelectedFromPipeline()">
+                    <i class="fas fa-trash-alt me-1"></i>
+                    Удалить (<span id="selected-count">0</span>)
+                </button>
+                {% endif %}
+
+                <button class="btn btn-outline-secondary btn-sm" type="button" onclick="clearAllFilters()" title="Очистить все фильтры">
+                    <i class="fas fa-filter me-1"></i>
+                    Очистить
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Скрытый input для импорта файла -->
+    {% if table_name == 'weld_repair_log' %}
+    <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv" style="display: none;">
+    {% endif %}
+    
+    <!-- Column Selector -->
+    <div class="collapse" id="columnSelector">
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-cog me-2"></i>
+                    Выберите столбцы для отображения
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for col in all_columns %}
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input column-checkbox-input" type="checkbox" 
+                                   value="{{ col }}" id="col_{{ col }}" 
+                                   {% if col in selected_columns %}checked{% endif %}>
+                            <label class="form-check-label" for="col_{{ col }}">
+                                {{ col }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary me-2" onclick="applyColumnSelection()">
+                        <i class="fas fa-check me-1"></i>Применить
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary me-2" onclick="selectAllColumns()">
+                        <i class="fas fa-check-double me-1"></i>Выбрать все
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary me-2" onclick="deselectAllColumns()">
+                        <i class="fas fa-times me-1"></i>Снять все выделение
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary me-2" onclick="selectDefaultColumns()">
+                        <i class="fas fa-undo me-1"></i>По умолчанию
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Индикатор изменения размера -->
+<div class="resize-indicator"></div>
+
+<!-- Data Table -->
+<div class="table-container">
+    {% if records %}
+    <!-- Pagination Controls -->
+    <div class="pagination-controls mb-3">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                    <label for="per_page_select" class="per-page-label">Записей на странице:</label>
+                    <select id="per_page_select" class="form-select form-select-sm" onchange="changePerPage(this.value)">
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                        <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+                        <option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="text-muted">
+                    {% if total_records > 0 %}
+                        Показано {{ ((page - 1) * per_page) + 1 }}-{{ [page * per_page, total_records] | min }} из {{ total_records | format_number }} записей
+                        {% if total_pages > 1 %}
+                            (страница {{ page }} из {{ total_pages }})
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <table class="table table-hover mb-0 data-table">
+        <thead>
+            <tr>
+                <th data-column="checkbox">
+                    <input type="checkbox" id="select-all-checkbox" onchange="toggleSelectAll()">
+                </th>
+                {% for column in columns %}
+                <th data-column="{{ column }}">
+                    {{ column }}
+                    <div class="column-resizer" data-column="{{ column }}"></div>
+                </th>
+                {% endfor %}
+            </tr>
+            <tr class="column-filter-row">
+                <td class="filter-container" data-column="checkbox">
+                    <!-- Пустая ячейка для чекбокса -->
+                </td>
+                {% for column in columns %}
+                <td class="filter-container" data-column="{{ column }}">
+                    <div class="filter-input-container">
+                        <input type="text" 
+                               class="column-filter" 
+                               placeholder="{% if column_filter_types.get(column, 'contains') == 'empty' %}Показывать только пустые{% elif column_filter_types.get(column, 'contains') == 'not_empty' %}Показывать только заполненные{% elif column_filter_types.get(column, 'contains') == 'not_contains' %}Значение для исключения...{% else %}Значение для поиска...{% endif %}" 
+                               data-column="{{ column }}"
+                               value="{{ column_filters.get(column, '') }}"
+                               {% if column_filter_types.get(column, 'contains') in ['empty', 'not_empty'] %}disabled{% endif %}
+                               onfocus="saveFilterFocus('{{ column }}')"
+                               onclick="saveFilterFocus('{{ column }}')">
+                        <button class="filter-clear-btn" 
+                                onclick="clearColumnFilter('{{ column }}')" 
+                                title="Очистить фильтр"
+                                style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <select class="filter-type-select" 
+                                data-column="{{ column }}"
+                                title="Тип фильтра">
+                            <option value="contains" {% if column_filter_types.get(column, 'contains') == 'contains' %}selected{% endif %}>Содержит</option>
+                            <option value="not_contains" {% if column_filter_types.get(column, 'contains') == 'not_contains' %}selected{% endif %}>Не содержит</option>
+                            <option value="empty" {% if column_filter_types.get(column, 'contains') == 'empty' %}selected{% endif %}>Пустые</option>
+                            <option value="not_empty" {% if column_filter_types.get(column, 'contains') == 'not_empty' %}selected{% endif %}>Не пустые</option>
+                        </select>
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+            <tr data-record-id="{{ record.id if record.id else '' }}">
+                <td class="checkbox-cell" data-column="checkbox">
+                    <input type="checkbox" class="record-checkbox" value="{{ record.get('app_row_id', record.get('id', '')) }}" 
+                           data-record-id="{{ record.get('app_row_id', record.get('id', '')) }}">
+                </td>
+                {% for column in columns %}
+                <td data-column="{{ column }}" {% if record[column] and record[column]|length > 50 %}title="{{ record[column] }}"{% endif %}>
+                    {% set value = record[column] %}
+                    {% if value is not none %}
+                        {% if column.lower() == 'full_path' and value %}
+                            <!-- DEBUG: column={{ column }}, value={{ value }} -->
+                            {% set value_str = value|string %}
+                            {% set file_name = value_str.split('\\')[-1] if '\\' in value_str else value_str.split('/')[-1] %}
+                            <div class="d-flex align-items-center">
+                                <span class="me-2 text-muted" style="font-size: 0.8em;">{{ file_name }}</span>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        data-file="{{ value_str|e }}" 
+                                        onclick="openFile(this.getAttribute('data-file'))" 
+                                        title="Открыть файл: {{ value_str }}">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </button>
+                            </div>
+                            <!-- DEBUG END: Кнопка должна быть выше -->
+                        {% elif column.lower() == 'распуловка' and value %}
+                            <!-- Обработка столбца распуловка для Log_Piping_PTO -->
+                            {% set value_str = value|string %}
+                            {% set file_name = value_str.split('\\')[-1] if '\\' in value_str else value_str.split('/')[-1] %}
+                            <div class="d-flex align-items-center">
+                                <span class="me-2 text-muted" style="font-size: 0.8em;">{{ file_name }}</span>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        data-file="{{ value_str|e }}" 
+                                        onclick="openFile(this.getAttribute('data-file'))" 
+                                        title="Открыть файл распуловки: {{ value_str }}">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </button>
+                            </div>
+                        {% elif column.lower() in ['source_file', 'sourcefile', 'source file'] and value %}
+                            <!-- Обработка столбца Source_File -->
+                            {% set value_str = value|string %}
+                            {% set file_name = value_str.split('\\')[-1] if '\\' in value_str else value_str.split('/')[-1] %}
+                            
+                            <!-- Проверяем, является ли это таблицей work_order_log_NDT -->
+                            {% if table_name == 'work_order_log_NDT' %}
+                                <!-- Для work_order_log_NDT показываем кнопку открытия файла -->
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2 text-muted" style="font-size: 0.8em;">{{ file_name }}</span>
+                                    <button class="btn btn-sm btn-outline-warning" 
+                                            data-file="{{ value_str|e }}" 
+                                            onclick="openFile(this.getAttribute('data-file'))" 
+                                            title="Открыть исходный файл: {{ value_str }}">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </button>
+                                </div>
+                            {% else %}
+                                <!-- Для остальных таблиц показываем только имя файла без иконки -->
+                                {{ file_name }}
+                            {% endif %}
+                        {% else %}
+                            {% if column.lower() == 'full_path' %}
+                                <!-- DEBUG: full_path но условие не сработало. value={{ value }}, type={{ value.__class__.__name__ }} -->
+                            {% endif %}
+                            {{ value }}
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">NULL</span>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Нет записей для отображения</h5>
+            <p class="text-muted">Попробуйте изменить фильтры или проверьте данные в базе</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div class="pagination-container mt-3">
+    <nav aria-label="Навигация по страницам">
+        <ul class="pagination justify-content-center">
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('view_table', table_name=table_name, page=1, per_page=per_page, search=search_term, columns=selected_columns|join(','), **column_filters) }}" title="Первая страница">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('view_table', table_name=table_name, page=page-1, per_page=per_page, search=search_term, columns=selected_columns|join(','), **column_filters) }}" title="Предыдущая страница">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for page_num in range([1, page-2]|max, [total_pages+1, page+3]|min) %}
+                {% if page_num == page %}
+                <li class="page-item active">
+                    <span class="page-link">{{ page_num }}</span>
+                </li>
+                {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('view_table', table_name=table_name, page=page_num, per_page=per_page, search=search_term, columns=selected_columns|join(','), **column_filters) }}">{{ page_num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('view_table', table_name=table_name, page=page+1, per_page=per_page, search=search_term, columns=selected_columns|join(','), **column_filters) }}" title="Следующая страница">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('view_table', table_name=table_name, page=total_pages, per_page=per_page, search=search_term, columns=selected_columns|join(','), **column_filters) }}" title="Последняя страница">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация появления таблицы
+    const table = document.querySelector('.data-table');
+    if (table) {
+        table.style.opacity = '0';
+        table.style.transform = 'translateY(20px)';
+        table.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        
+        setTimeout(() => {
+            table.style.opacity = '1';
+            table.style.transform = 'translateY(0)';
+            
+            // Автоматически применяем авторазмер после появления таблицы
+            setTimeout(() => {
+                if (typeof autoResizeColumns === 'function') {
+                    autoResizeColumns();
+                }
+                // Дополнительно исправляем столбцы с датами
+                setTimeout(() => {
+                    if (typeof fixDateColumns === 'function') {
+                        fixDateColumns();
+                    }
+                    // Инициализируем перетаскивание столбцов
+                    setTimeout(() => {
+                        if (typeof initColumnResizing === 'function') {
+                            initColumnResizing();
+                        }
+                    }, 100);
+                    
+                    // Инициализируем фильтры столбцов
+                    initializeColumnFilters();
+                    // Починка: если где-то отсутствуют контролы фильтра, восстановим их
+                    (function repairMissingFilterControls(){
+                        try {
+                            const tds = document.querySelectorAll('.column-filter-row td[data-column]');
+                            tds.forEach(td => {
+                                if (!td.querySelector('.filter-input-container')) {
+                                    const columnName = td.getAttribute('data-column');
+                                    const container = document.createElement('div');
+                                    container.className = 'filter-input-container';
+                                    // input
+                                    const input = document.createElement('input');
+                                    input.type = 'text';
+                                    input.className = 'column-filter';
+                                    input.setAttribute('data-column', columnName);
+                                    input.placeholder = 'Значение для поиска...';
+                                    input.addEventListener('keyup', () => window.applyColumnFilter && window.applyColumnFilter(columnName, input.value));
+                                    input.addEventListener('keypress', (e) => window.handleFilterKeyPress && window.handleFilterKeyPress(e, columnName));
+                                    // clear btn
+                                    const clearBtn = document.createElement('button');
+                                    clearBtn.className = 'filter-clear-btn';
+                                    clearBtn.type = 'button';
+                                    clearBtn.title = 'Очистить фильтр';
+                                    clearBtn.innerHTML = '<i class="fas fa-times"></i>';
+                                    clearBtn.addEventListener('click', () => window.clearColumnFilter && window.clearColumnFilter(columnName));
+                                    // select
+                                    const sel = document.createElement('select');
+                                    sel.className = 'filter-type-select';
+                                    sel.setAttribute('data-column', columnName);
+                                    sel.innerHTML = `
+                                        <option value="contains">Содержит</option>
+                                        <option value="not_contains">Не содержит</option>
+                                        <option value="empty">Пустые</option>
+                                        <option value="not_empty">Не пустые</option>
+                                    `;
+                                    sel.addEventListener('change', () => window.selectFilterType && window.selectFilterType(columnName, sel.value));
+                                    // mount
+                                    container.appendChild(input);
+                                    container.appendChild(clearBtn);
+                                    container.appendChild(sel);
+                                    td.textContent = '';
+                                    td.appendChild(container);
+                                }
+                            });
+                        } catch(e) { console.warn('repairMissingFilterControls error', e); }
+                    })();
+                    // Привязываем обработчики к элементам фильтрации, перекрывая inline-обработчики
+                    const filterInputs = document.querySelectorAll('.column-filter');
+                    filterInputs.forEach(input => {
+                        const col = input.getAttribute('data-column');
+                        input.onkeyup = () => window.applyColumnFilter && window.applyColumnFilter(col, input.value);
+                        input.onkeypress = (e) => window.handleFilterKeyPress && window.handleFilterKeyPress(e, col);
+                    });
+                    const filterSelects = document.querySelectorAll('.filter-type-select');
+                    filterSelects.forEach(select => {
+                        const col = select.getAttribute('data-column');
+                        select.onchange = () => window.selectFilterType && window.selectFilterType(col, select.value);
+                    });
+                }, 200);
+            }, 100);
+        }, 100);
+    }
+    
+    // Автоматический поиск при вводе с сохранением фокуса
+    const searchInput = document.querySelector('input[name="search"]');
+    if (searchInput) {
+        let searchTimeout;
+        
+        // Автоматический поиск всегда включен
+        
+        // Показываем информацию о регистронезависимом поиске при фокусе
+        searchInput.addEventListener('focus', function() {
+            // Показываем информацию каждый раз при фокусе, если поле не пустое
+            if (this.value.trim()) {
+                const searchTerm = this.value;
+                const searchTermLower = searchTerm.toLowerCase();
+                showNotification(`🔍 Поиск: "${searchTerm}" и "${searchTermLower}" (регистронезависимый)`);
+            } else {
+                showNotification('💡 Поиск работает без учета регистра букв');
+            }
+        });
+        
+        // Обработчик ввода для автоматического поиска
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                // Показываем информацию о поиске перед отправкой
+                if (this.value.trim()) {
+                    const searchTerm = this.value;
+                    const searchTermLower = searchTerm.toLowerCase();
+                    showNotification(`🔍 Ищем: "${searchTerm}" и "${searchTermLower}" (регистронезависимый)...`);
+                }
+                // Сохраняем позицию курсора перед отправкой формы
+                const cursorPosition = this.selectionStart;
+                sessionStorage.setItem('searchCursorPosition', cursorPosition);
+                document.getElementById('searchForm').submit();
+            }, 500);
+        });
+        
+        // Добавляем обработчик для Enter и Escape
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(searchTimeout);
+                // Показываем информацию о поиске перед отправкой
+                if (this.value.trim()) {
+                    const searchTerm = this.value;
+                    const searchTermLower = searchTerm.toLowerCase();
+                    showNotification(`🔍 Ищем: "${searchTerm}" и "${searchTermLower}" (регистронезависимый)...`);
+                }
+                // Сохраняем позицию курсора перед отправкой формы
+                const cursorPosition = this.selectionStart;
+                sessionStorage.setItem('searchCursorPosition', cursorPosition);
+                document.getElementById('searchForm').submit();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                clearSearch();
+            }
+        });
+        
+        // Восстанавливаем фокус и позицию курсора после загрузки страницы
+        if (searchInput.value) {
+            searchInput.focus();
+            const savedPosition = sessionStorage.getItem('searchCursorPosition');
+            if (savedPosition) {
+                const position = parseInt(savedPosition);
+                if (position <= searchInput.value.length) {
+                    searchInput.setSelectionRange(position, position);
+                }
+                sessionStorage.removeItem('searchCursorPosition');
+            }
+            
+            // Показываем информацию о текущем поиске
+            setTimeout(() => {
+                const totalRecords = parseInt('{{ total_records }}');
+                const currentRecords = parseInt('{{ records|length }}');
+                if (searchInput.value.trim()) {
+                    const searchTerm = searchInput.value;
+                    const searchTermLower = searchTerm.toLowerCase();
+                    showNotification(`🔍 Поиск: "${searchTerm}" и "${searchTermLower}" - найдено ${currentRecords} из ${totalRecords} записей (регистронезависимый)`);
+                }
+            }, 500);
+        } else {
+            // Если поле поиска пустое, устанавливаем на него фокус
+            searchInput.focus();
+        }
+    }
+    
+    // Автоматический авторазмер при изменении размера окна
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            if (typeof autoResizeColumns === 'function') {
+                console.log('🔄 Автоматический авторазмер при изменении размера окна');
+                autoResizeColumns();
+            }
+        }, 300);
+    });
+});
+
+
+// AJAX функции удалены - теперь используется перезагрузка страницы как в logs_lnk_table.html
+
+// Функция показа сообщения об ошибке
+function showErrorMessage(message) {
+    const tableContainer = document.querySelector('.data-table');
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'alert alert-danger text-center';
+    errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${message}`;
+    tableContainer.appendChild(errorDiv);
+    
+    // Убираем сообщение через 5 секунд
+    setTimeout(() => {
+        if (errorDiv.parentNode) {
+            errorDiv.remove();
+        }
+    }, 5000);
+}
+
+// Функция toggleAutoSearch удалена - теперь используется простая перезагрузка страницы
+
+// Функция показа уведомления
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    
+    // Убираем уведомление через 3 секунды
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+// Функция экспорта отфильтрованных данных в Excel
+async function exportFilteredToExcel() {
+    const exportBtn = event.target;
+    const originalText = exportBtn.innerHTML;
+    
+    try {
+        // Показываем индикатор загрузки
+        exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Подготовка экспорта...';
+        exportBtn.disabled = true;
+        
+        // Показываем уведомление о применяемых фильтрах
+        const filterCount = document.querySelectorAll('.column-filter').length;
+        const activeFilters = Array.from(document.querySelectorAll('.column-filter'))
+            .filter(input => input.value.trim() !== '').length;
+        
+        if (activeFilters > 0) {
+            console.log(`📊 [EXPORT INFO] Применяется ${activeFilters} фильтр(ов) по столбцам`);
+        }
+        
+        // Получаем текущие параметры фильтрации
+        const searchQuery = document.querySelector('input[name="search"]').value;
+        const selectedColumns = Array.from(document.querySelectorAll('.column-checkbox-input:checked'))
+            .map(cb => cb.value);
+        
+        // Получаем все фильтры по столбцам
+        const columnFilters = {};
+        const filterInputs = document.querySelectorAll('.column-filter');
+        filterInputs.forEach(input => {
+            if (input.value.trim() !== '') {
+                const columnName = input.getAttribute('data-column');
+                columnFilters[columnName] = input.value.trim();
+            }
+        });
+        
+        // Формируем URL для экспорта
+        const exportUrl = new URL(`/export_filtered/{{ table_name }}`, window.location.origin);
+        exportUrl.searchParams.set('search', searchQuery);
+        
+        // Если выбраны все столбцы — не передаем параметр columns (бэкенд возьмет все сам)
+        const totalColumns = document.querySelectorAll('.column-checkbox-input').length;
+        if (selectedColumns.length === totalColumns) {
+            // ничего не добавляем в columns
+        } else if (selectedColumns.length === 0) {
+            exportUrl.searchParams.set('columns', '');
+        } else {
+            exportUrl.searchParams.set('columns', selectedColumns.join(','));
+        }
+        
+        // Добавляем фильтры по столбцам
+        for (const [columnName, filterValue] of Object.entries(columnFilters)) {
+            exportUrl.searchParams.set(`filter_${columnName}`, filterValue);
+        }
+
+        // Дублируем все текущие параметры фильтрации из адресной строки,
+        // чтобы гарантированно передать и типы фильтров (filter_type_*)
+        const currentUrlParams = new URLSearchParams(window.location.search);
+        for (const [key, value] of currentUrlParams.entries()) {
+            if ((key.startsWith('filter_') || key.startsWith('filter_type_')) && value !== null) {
+                exportUrl.searchParams.set(key, value);
+            }
+        }
+        
+        // Логируем URL для отладки
+        console.log('🔍 [EXPORT DEBUG] Export URL:', exportUrl.toString());
+        console.log('🔍 [EXPORT DEBUG] Search query:', searchQuery);
+        console.log('🔍 [EXPORT DEBUG] Selected columns:', selectedColumns);
+        console.log('🔍 [EXPORT DEBUG] Column filters:', columnFilters);
+        console.log('🔍 [EXPORT DEBUG] Filter inputs found:', document.querySelectorAll('.column-filter').length);
+        
+        // Показываем пользователю, какие фильтры применяются
+        if (Object.keys(columnFilters).length > 0) {
+            console.log('✅ [EXPORT DEBUG] Применяются фильтры по столбцам:', Object.keys(columnFilters));
+        } else {
+            console.log('⚠️ [EXPORT DEBUG] Фильтры по столбцам НЕ применяются');
+        }
+        
+        // Выполняем запрос на экспорт
+        const response = await fetch(exportUrl);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Получаем blob с файлом
+        const blob = await response.blob();
+        
+        // Создаем ссылку для скачивания
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Формируем имя файла
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timestamp = `${day}.${month}.${year}_${hours}-${minutes}-${seconds}`;
+        const fileName = `{{ table_name }}_filtered_${timestamp}.xlsx`;
+        a.download = fileName;
+        
+        // Запускаем скачивание
+        document.body.appendChild(a);
+        a.click();
+        
+        // Очищаем ресурсы
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Показываем уведомление об успехе
+        showNotification(`✅ Экспорт завершен! Файл "${fileName}" скачан.`);
+        
+    } catch (error) {
+        console.error('Ошибка экспорта:', error);
+        showNotification(`❌ Ошибка экспорта: ${error.message}`);
+    } finally {
+        // Восстанавливаем кнопку
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+    }
+}
+
+// Функция импорта из Excel для weld_repair_log
+function importFromExcel() {
+    const importFileInput = document.getElementById('import-file-input');
+    if (importFileInput) {
+        importFileInput.click();
+    }
+}
+
+// Обработчик изменения файла для импорта
+document.addEventListener('DOMContentLoaded', function() {
+    const importFileInput = document.getElementById('import-file-input');
+    if (importFileInput) {
+        importFileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                importFromExcelFile(this.files[0]);
+            }
+        });
+    }
+});
+
+// Функция импорта файла
+async function importFromExcelFile(file) {
+    try {
+        // Показываем индикатор загрузки
+        const importBtn = document.querySelector('button[onclick="importFromExcel()"]');
+        const originalText = importBtn.innerHTML;
+        importBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Импорт...';
+        importBtn.disabled = true;
+        
+        // Создаем FormData для отправки файла
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Отправляем запрос на импорт
+        const response = await fetch('/api/weld_repair_log/import', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(`✅ Импорт выполнен успешно! Обработано: ${result.processed}, обновлено: ${result.updated}, создано: ${result.created}`);
+            // Обновляем страницу
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            showNotification(`❌ Ошибка импорта: ${result.message}`);
+        }
+    } catch (error) {
+        console.error('Ошибка импорта:', error);
+        showNotification(`❌ Ошибка подключения к серверу при импорте`);
+    } finally {
+        // Восстанавливаем кнопку
+        const importBtn = document.querySelector('button[onclick="importFromExcel()"]');
+        if (importBtn) {
+            importBtn.innerHTML = '<i class="fas fa-file-import me-1"></i>Импорт';
+            importBtn.disabled = false;
+        }
+        
+        // Очищаем input файла
+        const importFileInput = document.getElementById('import-file-input');
+        if (importFileInput) {
+            importFileInput.value = '';
+        }
+    }
+}
+
+// Функция для изменения количества записей на странице
+function changePerPage(newPerPage) {
+    const currentUrl = new URL(window.location);
+    currentUrl.searchParams.set('per_page', newPerPage);
+    currentUrl.searchParams.set('page', '1'); // Сбрасываем на первую страницу
+    window.location.href = currentUrl.toString();
+}
+
+// Функция для принудительного авторазмера (для отладки)
+function forceAutoResize() {
+    console.log('🔧 Принудительный авторазмер...');
+    if (typeof autoResizeColumns === 'function') {
+        autoResizeColumns();
+    } else {
+        console.log('❌ Функция autoResizeColumns не найдена');
+    }
+}
+
+// Функция для принудительного исправления столбцов с датами
+function fixDateColumns() {
+    console.log('📅 Принудительное исправление столбцов с датами...');
+    
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        console.log('❌ Таблица .data-table не найдена');
+        return;
+    }
+    
+    const dateColumns = ['Дата_контроля_ВИК', 'Дата_контроля_РК', 'Дата_заявки', 'Дата_сварки', 'Дата_Заключения_РК', 'Дата_АКТ_ВИК'];
+    
+    dateColumns.forEach(columnName => {
+        const headers = table.querySelectorAll(`th[data-column="${columnName}"]`);
+        const cells = table.querySelectorAll(`td[data-column="${columnName}"]`);
+        
+        if (headers.length > 0 || cells.length > 0) {
+            console.log(`🔧 Исправление столбца ${columnName}: найдено ${headers.length} заголовков, ${cells.length} ячеек`);
+            
+            // Применяем стили к заголовкам
+            headers.forEach(header => {
+                header.style.setProperty('width', '150px', 'important');
+                header.style.setProperty('min-width', '150px', 'important');
+                header.style.setProperty('max-width', '150px', 'important');
+                header.style.setProperty('text-align', 'center', 'important');
+                header.style.setProperty('white-space', 'nowrap', 'important');
+            });
+            
+            // Применяем стили к ячейкам
+            cells.forEach(cell => {
+                cell.style.setProperty('width', '150px', 'important');
+                cell.style.setProperty('min-width', '150px', 'important');
+                cell.style.setProperty('max-width', '150px', 'important');
+                cell.style.setProperty('text-align', 'center', 'important');
+                cell.style.setProperty('white-space', 'nowrap', 'important');
+            });
+        }
+    });
+    
+    showNotification('📅 Столбцы с датами исправлены');
+}
+
+// Функция для инициализации перетаскивания столбцов
+function initColumnResizing() {
+    console.log('🔧 Инициализация перетаскивания столбцов...');
+    
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        console.log('❌ Таблица .data-table не найдена');
+        return;
+    }
+    
+    const resizers = table.querySelectorAll('.column-resizer');
+    const resizeIndicator = document.querySelector('.resize-indicator');
+    
+    let isResizing = false;
+    let currentResizer = null;
+    let startX = 0;
+    let startWidth = 0;
+    
+    resizers.forEach(resizer => {
+        resizer.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            isResizing = true;
+            currentResizer = this;
+            startX = e.clientX;
+            
+            const columnName = this.getAttribute('data-column');
+            const header = table.querySelector(`th[data-column="${columnName}"]`);
+            startWidth = header.offsetWidth;
+            
+            this.classList.add('active');
+            resizeIndicator.style.display = 'block';
+            resizeIndicator.style.left = e.clientX + 'px';
+            
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            
+            console.log(`🔧 Начало изменения размера столбца: ${columnName}, текущая ширина: ${startWidth}px`);
+        });
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing || !currentResizer) return;
+        
+        const deltaX = e.clientX - startX;
+        const newWidth = Math.max(50, startWidth + deltaX); // Минимум 50px
+        
+        resizeIndicator.style.left = e.clientX + 'px';
+        
+        const columnName = currentResizer.getAttribute('data-column');
+        const header = table.querySelector(`th[data-column="${columnName}"]`);
+        const cells = table.querySelectorAll(`td[data-column="${columnName}"]`);
+        
+        // Применяем новую ширину к заголовку
+        header.style.setProperty('width', newWidth + 'px', 'important');
+        header.style.setProperty('min-width', newWidth + 'px', 'important');
+        header.style.setProperty('max-width', newWidth + 'px', 'important');
+        
+        // Применяем новую ширину ко всем ячейкам столбца
+        cells.forEach(cell => {
+            cell.style.setProperty('width', newWidth + 'px', 'important');
+            cell.style.setProperty('min-width', newWidth + 'px', 'important');
+            cell.style.setProperty('max-width', newWidth + 'px', 'important');
+        });
+    });
+    
+    document.addEventListener('mouseup', function() {
+        if (!isResizing || !currentResizer) return;
+        
+        const columnName = currentResizer.getAttribute('data-column');
+        const header = table.querySelector(`th[data-column="${columnName}"]`);
+        const finalWidth = header.offsetWidth;
+        
+        currentResizer.classList.remove('active');
+        resizeIndicator.style.display = 'none';
+        
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        
+        isResizing = false;
+        currentResizer = null;
+        
+        console.log(`✅ Изменение размера столбца завершено: ${columnName}, финальная ширина: ${finalWidth}px`);
+        showNotification(`📏 Столбец "${columnName}" изменен до ${finalWidth}px`);
+    });
+    
+    console.log(`✅ Инициализировано ${resizers.length} элементов для перетаскивания`);
+}
+
+// Функция для анализа содержимого столбцов
+function analyzeColumnContent(columnName, cellTexts) {
+    const analysis = {
+        maxLength: 0,
+        avgLength: 0,
+        hasLongText: false,
+        hasMultiline: false,
+        hasSpecialChars: false,
+        hasDates: false,
+        hasNumbers: false,
+        suggestedWidth: 150
+    };
+    
+    if (!cellTexts || cellTexts.length === 0) return analysis;
+    
+    let totalLength = 0;
+    let longTextCount = 0;
+    let dateCount = 0;
+    let numberCount = 0;
+    
+    cellTexts.forEach(text => {
+        if (text) {
+            const length = text.length;
+            analysis.maxLength = Math.max(analysis.maxLength, length);
+            totalLength += length;
+            
+            if (length > 50) longTextCount++;
+            if (text.includes('\n')) analysis.hasMultiline = true;
+            if (/[^\w\s\-\.]/.test(text)) analysis.hasSpecialChars = true;
+            
+            // Проверяем на даты (формат YYYY-MM-DD или DD.MM.YYYY)
+            if (/^\d{4}-\d{2}-\d{2}/.test(text) || /^\d{2}\.\d{2}\.\d{4}/.test(text)) {
+                dateCount++;
+            }
+            
+            // Проверяем на числа
+            if (/^\d+$/.test(text) || /^\d+\.\d+$/.test(text)) {
+                numberCount++;
+            }
+        }
+    });
+    
+    analysis.avgLength = totalLength / cellTexts.length;
+    analysis.hasLongText = longTextCount > cellTexts.length * 0.3;
+    analysis.hasDates = dateCount > cellTexts.length * 0.5; // Если более 50% - даты
+    analysis.hasNumbers = numberCount > cellTexts.length * 0.5; // Если более 50% - числа
+    
+    // Определяем рекомендуемую ширину на основе анализа
+    if (analysis.hasDates) {
+        analysis.suggestedWidth = 150; // Даты обычно короткие
+    } else if (analysis.hasNumbers) {
+        analysis.suggestedWidth = 120; // Числа еще короче
+    } else if (analysis.maxLength > 100) {
+        analysis.suggestedWidth = 500;
+    } else if (analysis.maxLength > 50) {
+        analysis.suggestedWidth = 300;
+    } else if (analysis.maxLength > 20) {
+        analysis.suggestedWidth = 200;
+    } else {
+        analysis.suggestedWidth = 150;
+    }
+    
+    return analysis;
+}
+
+// Функция для анализа всех столбцов таблицы
+function analyzeAllColumns() {
+    console.log('📊 Анализ всех столбцов таблицы...');
+    
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        console.log('❌ Таблица .data-table не найдена');
+        return;
+    }
+    
+    const headers = table.querySelectorAll('thead th');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    if (headers.length === 0) {
+        console.log('❌ Заголовки таблицы не найдены');
+        return;
+    }
+    
+    const analysisResults = [];
+    
+    headers.forEach((header, columnIndex) => {
+        const columnName = header.getAttribute('data-column');
+        const cellTexts = [];
+        
+        // Собираем тексты ячеек
+        const rowsToCheck = Math.min(rows.length, 50); // Проверяем больше строк для анализа
+        for (let i = 0; i < rowsToCheck; i++) {
+            const cell = rows[i].querySelector(`td[data-column="${columnName}"]`);
+            if (cell) {
+                const cellText = cell.textContent || cell.innerText || '';
+                if (cellText.trim()) {
+                    cellTexts.push(cellText.trim());
+                }
+            }
+        }
+        
+        const analysis = analyzeColumnContent(columnName, cellTexts);
+        analysisResults.push({
+            columnName: columnName,
+            analysis: analysis,
+            sampleTexts: cellTexts.slice(0, 3) // Первые 3 текста для примера
+        });
+    });
+    
+    // Выводим результаты анализа
+    console.log('📊 РЕЗУЛЬТАТЫ АНАЛИЗА СТОЛБЦОВ:');
+    console.table(analysisResults.map(result => ({
+        'Столбец': result.columnName,
+        'Макс. длина': result.analysis.maxLength,
+        'Сред. длина': Math.round(result.analysis.avgLength),
+        'Длинный текст': result.analysis.hasLongText ? 'Да' : 'Нет',
+        'Многострочный': result.analysis.hasMultiline ? 'Да' : 'Нет',
+        'Рек. ширина': result.analysis.suggestedWidth + 'px'
+    })));
+    
+    // Показываем уведомление с краткой сводкой
+    const longColumns = analysisResults.filter(r => r.analysis.hasLongText || r.analysis.maxLength > 100);
+    const message = longColumns.length > 0 
+        ? `📊 Найдено ${longColumns.length} столбцов с длинным текстом: ${longColumns.map(r => r.columnName).join(', ')}`
+        : '📊 Все столбцы имеют нормальную длину';
+    
+    showNotification(message);
+}
+
+// Функция для автоматического изменения размера столбцов по содержимому
+function autoResizeColumns() {
+    console.log('🔧 Запуск авторазмера столбцов...');
+    
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        console.log('❌ Таблица .data-table не найдена');
+        return;
+    }
+    
+    const headers = table.querySelectorAll('thead th');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    console.log(`📊 Найдено заголовков: ${headers.length}, строк: ${rows.length}`);
+    
+    if (headers.length === 0) {
+        console.log('❌ Заголовки таблицы не найдены');
+        return;
+    }
+    
+    // Создаем временный элемент для измерения текста с точными стилями таблицы
+    const measureElement = document.createElement('span');
+    measureElement.style.cssText = `
+        position: absolute; 
+        visibility: hidden; 
+        white-space: nowrap; 
+        font-family: inherit; 
+        font-size: inherit; 
+        padding: 0.75rem; 
+        margin: 0; 
+        border: 1px solid #dee2e6;
+        box-sizing: border-box;
+        font-weight: inherit;
+        line-height: 1.4;
+    `;
+    document.body.appendChild(measureElement);
+    
+    // Копируем стили из таблицы для точного измерения
+    const tableStyles = window.getComputedStyle(table);
+    measureElement.style.fontFamily = tableStyles.fontFamily;
+    measureElement.style.fontSize = tableStyles.fontSize;
+    measureElement.style.fontWeight = tableStyles.fontWeight;
+    
+    headers.forEach((header, columnIndex) => {
+        const columnName = header.getAttribute('data-column');
+        let maxWidth = 0;
+        const cellTexts = [];
+        
+        console.log(`📏 Обработка столбца: ${columnName}`);
+        
+        // Измеряем ширину заголовка
+        const headerText = header.textContent.trim();
+        measureElement.textContent = headerText;
+        const headerWidth = measureElement.offsetWidth;
+        maxWidth = Math.max(maxWidth, headerWidth);
+        console.log(`  Заголовок "${headerText}": ${headerWidth}px`);
+        
+        // Анализируем ВСЕ строки для точного определения максимальной ширины
+        const allRows = Array.from(rows);
+        console.log(`  Анализируем ${allRows.length} строк для столбца ${columnName}`);
+        
+        allRows.forEach((row, rowIndex) => {
+            const cell = row.querySelector(`td[data-column="${columnName}"]`);
+            if (cell) {
+                const cellText = cell.textContent || cell.innerText || '';
+                if (cellText.trim()) {
+                    cellTexts.push(cellText.trim());
+                    
+                    // Обрабатываем многострочный текст
+                    const lines = cellText.split('\n');
+                    let maxLineWidth = 0;
+                    
+                    lines.forEach((line, lineIndex) => {
+                        const trimmedLine = line.trim();
+                        if (trimmedLine) {
+                            measureElement.textContent = trimmedLine;
+                            const lineWidth = measureElement.offsetWidth;
+                            maxLineWidth = Math.max(maxLineWidth, lineWidth);
+                            
+                            // Логируем только первые несколько строк для отладки
+                            if (rowIndex < 5 && lineIndex === 0) {
+                                console.log(`  Строка ${rowIndex + 1}, линия ${lineIndex + 1}: "${trimmedLine}" - ${lineWidth}px`);
+                            }
+                        }
+                    });
+                    
+                    maxWidth = Math.max(maxWidth, maxLineWidth);
+                }
+            }
+        });
+        
+        // Анализируем содержимое столбца
+        const analysis = analyzeColumnContent(columnName, cellTexts);
+        console.log(`📊 Анализ столбца "${columnName}":`, analysis);
+        
+        // Определяем оптимальную ширину на основе содержимого
+        let optimalWidth = maxWidth;
+        
+        // Добавляем небольшой отступ для комфортного чтения
+        optimalWidth += 20;
+        
+        // Применяем минимальные и максимальные ограничения
+        const minWidth = 80;
+        let maxAllowedWidth = 600; // Увеличиваем максимальную ширину
+        
+        // Определяем тип столбца и применяем специфичные настройки
+        if (columnName === 'app_row_id' || columnName === 'id') {
+            maxAllowedWidth = 100;
+        } else if (columnName === 'ISO' || columnName.includes('ISO') || columnName.includes('чертеж') || columnName.includes('Чертеж')) {
+            maxAllowedWidth = 600;
+        } else if (columnName === 'Дата_контроля_ВИК' || columnName === 'Дата_контроля_РК' || columnName === 'Дата_Заключения_РК' || columnName === 'Дата_АКТ_ВИК') {
+            maxAllowedWidth = 150;
+            optimalWidth = Math.max(optimalWidth, 120); // Минимум 120px для дат
+        } else if (columnName.includes('дата') || columnName.includes('Дата') || columnName.includes('date')) {
+            maxAllowedWidth = 200;
+        } else if (columnName.includes('номер') || columnName.includes('Номер') || columnName.includes('number')) {
+            maxAllowedWidth = 150;
+        } else if (columnName.includes('путь') || columnName.includes('Путь') || columnName.includes('path') || columnName.includes('full_path')) {
+            maxAllowedWidth = 500;
+        } else if (columnName.includes('описание') || columnName.includes('Описание') || 
+                   columnName.includes('примечания') || columnName.includes('Примечания') ||
+                   columnName.includes('заключение') || columnName.includes('Заключение') ||
+                   columnName.includes('результат') || columnName.includes('Результат')) {
+            maxAllowedWidth = 500;
+        } else if (columnName.includes('статус') || columnName.includes('Статус') || columnName.includes('status')) {
+            maxAllowedWidth = 150;
+        } else if (columnName.includes('титул') || columnName.includes('Титул') || columnName.includes('title')) {
+            maxAllowedWidth = 300;
+        } else if (columnName.includes('линия') || columnName.includes('Линия') || columnName.includes('line')) {
+            maxAllowedWidth = 150;
+        } else if (columnName.includes('стык') || columnName.includes('Стык') || columnName.includes('joint')) {
+            maxAllowedWidth = 150;
+        } else {
+            // Для неизвестных столбцов используем анализ содержимого
+            if (analysis.maxLength > 100) {
+                maxAllowedWidth = 500;
+            } else if (analysis.maxLength > 50) {
+                maxAllowedWidth = 300;
+            } else {
+                maxAllowedWidth = 200;
+            }
+        }
+        
+        // Применяем ограничения
+        optimalWidth = Math.max(optimalWidth, minWidth);
+        optimalWidth = Math.min(optimalWidth, maxAllowedWidth);
+        
+        console.log(`🔧 Столбец "${columnName}": измерено=${maxWidth}px, оптимально=${optimalWidth}px, максимум=${maxAllowedWidth}px`);
+        
+        // Применяем ширину к заголовку
+        header.style.setProperty('width', optimalWidth + 'px', 'important');
+        header.style.setProperty('min-width', optimalWidth + 'px', 'important');
+        header.style.setProperty('max-width', optimalWidth + 'px', 'important');
+        
+        // Специальная обработка для столбцов с датами
+        if (columnName.includes('Дата')) {
+            header.style.setProperty('text-align', 'center', 'important');
+            header.style.setProperty('white-space', 'nowrap', 'important');
+        }
+        
+        // Применяем ширину ко всем ячейкам этого столбца
+        allRows.forEach(row => {
+            const cell = row.querySelector(`td[data-column="${columnName}"]`);
+            if (cell) {
+                cell.style.setProperty('width', optimalWidth + 'px', 'important');
+                cell.style.setProperty('min-width', optimalWidth + 'px', 'important');
+                cell.style.setProperty('max-width', optimalWidth + 'px', 'important');
+                
+                // Специальная обработка для столбцов с датами
+                if (columnName.includes('Дата')) {
+                    cell.style.setProperty('text-align', 'center', 'important');
+                    cell.style.setProperty('white-space', 'nowrap', 'important');
+                }
+            }
+        });
+        
+        console.log(`✅ Применена ширина к столбцу "${columnName}": ${optimalWidth}px`);
+    });
+    
+    // Удаляем временный элемент
+    document.body.removeChild(measureElement);
+    
+    console.log('🎉 Авторазмер столбцов завершен');
+    
+    // Показываем уведомление
+    showNotification('📏 Размеры столбцов автоматически изменены по содержимому');
+}
+
+// Функция для открытия файлов
+function openFile(filePath) {
+    try {
+        if (!filePath || filePath.trim() === '') {
+            showNotification('❌ Путь к файлу не указан');
+            return;
+        }
+        
+        const fileName = filePath.split('\\').pop().split('/').pop();
+        
+        showNotification(`🔍 Открываю файл: ${fileName}`);
+        
+        // Отправляем запрос на сервер для открытия файла
+        fetch(`/api/open_file?path=${encodeURIComponent(filePath)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`✅ ${data.message}`);
+                } else {
+                    showNotification(`❌ ${data.error}`);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при открытии файла:', error);
+                showNotification(`❌ Ошибка соединения с сервером`);
+            });
+        
+    } catch (error) {
+        console.error('Ошибка при открытии файла:', error);
+        showNotification(`❌ Ошибка: ${error.message}`);
+    }
+}
+
+// Функции для фильтрации по столбцам
+let columnFilters = {};
+let columnFilterTypes = {};
+
+function applyColumnFilter(columnName, filterValue) {
+    console.log(`🔍 Обновляем фильтр для столбца "${columnName}": "${filterValue}"`);
+    
+    // Получаем тип фильтра
+    const filterType = columnFilterTypes[columnName] || 'contains';
+    
+    // Сохраняем фильтр
+    if (filterValue.trim() === '' && filterType !== 'empty' && filterType !== 'not_empty') {
+        delete columnFilters[columnName];
+        delete columnFilterTypes[columnName];
+    } else {
+        columnFilters[columnName] = filterValue;
+        columnFilterTypes[columnName] = filterType;
+    }
+    
+    // Показываем/скрываем кнопку очистки
+    const clearBtn = document.querySelector(`[data-column="${columnName}"] .filter-clear-btn`);
+    const filterContainer = document.querySelector(`[data-column="${columnName}"]`);
+    
+    if (clearBtn && filterContainer) {
+        if (filterValue.trim() !== '' || filterType === 'empty' || filterType === 'not_empty') {
+            clearBtn.style.display = 'flex';
+            filterContainer.classList.add('filter-active');
+        } else {
+            clearBtn.style.display = 'none';
+            filterContainer.classList.remove('filter-active');
+        }
+    }
+    
+    // Сохраняем фокус текущего поля
+    const currentFilterInput = document.querySelector(`[data-column="${columnName}"] .column-filter`);
+    if (currentFilterInput === document.activeElement) {
+        sessionStorage.setItem('lastFocusedFilter', columnName);
+        console.log(`🔧 Сохранен фокус для фильтра: ${columnName}`);
+    }
+    
+    // Применение выполняется только по Enter (см. handleFilterKeyPress) или при выборе типа empty/not_empty
+}
+
+function handleFilterKeyPress(event, columnName) {
+    if (event.key === 'Enter') {
+        console.log(`🔍 Применяем фильтр по Enter для столбца "${columnName}"`);
+        applyServerFilters();
+    }
+}
+
+// Экспортируем функции в глобальную область, чтобы они были доступны из inline-обработчиков
+window.applyColumnFilter = applyColumnFilter;
+window.handleFilterKeyPress = handleFilterKeyPress;
+window.selectFilterType = selectFilterType;
+
+
+function selectFilterType(columnName, filterType) {
+    console.log(`🔧 Выбран тип фильтра для столбца "${columnName}": "${filterType}"`);
+    
+    // Сохраняем тип фильтра
+    columnFilterTypes[columnName] = filterType;
+    
+    // Получаем текущее значение фильтра
+    const filterInput = document.querySelector(`[data-column="${columnName}"] .column-filter`);
+    const currentValue = filterInput ? filterInput.value : '';
+    
+    // Обновляем placeholder и состояние поля ввода
+    if (filterInput) {
+        switch (filterType) {
+            case 'contains':
+                filterInput.placeholder = 'Значение для поиска...';
+                filterInput.disabled = false;
+                break;
+            case 'not_contains':
+                filterInput.placeholder = 'Значение для исключения...';
+                filterInput.disabled = false;
+                break;
+            case 'empty':
+                filterInput.placeholder = 'Показывать только пустые';
+                filterInput.disabled = true;
+                filterInput.value = '';
+                break;
+            case 'not_empty':
+                filterInput.placeholder = 'Показывать только заполненные';
+                filterInput.disabled = true;
+                filterInput.value = '';
+                break;
+        }
+    }
+    
+    // Если есть значение фильтра, применяем его
+    if (currentValue.trim() !== '' || filterType === 'empty' || filterType === 'not_empty') {
+        applyColumnFilter(columnName, filterType === 'empty' || filterType === 'not_empty' ? 'special' : currentValue);
+        
+        // Автоматически применяем фильтры для типов "пустые" и "не пустые"
+        if (filterType === 'empty' || filterType === 'not_empty') {
+            console.log(`🚀 Автоматически применяем фильтр "${filterType}" для столбца "${columnName}"`);
+            applyServerFilters();
+        }
+    }
+}
+
+function clearColumnFilter(columnName) {
+    console.log(`🧹 Очищаем фильтр для столбца "${columnName}"`);
+    
+    // Очищаем поле ввода
+    const filterInput = document.querySelector(`[data-column="${columnName}"] .column-filter`);
+    if (filterInput) {
+        filterInput.value = '';
+        filterInput.disabled = false;
+        filterInput.placeholder = 'Значение для поиска...';
+    }
+    
+    // Удаляем фильтр и тип фильтра
+    delete columnFilters[columnName];
+    delete columnFilterTypes[columnName];
+    
+    // Скрываем кнопку очистки и убираем активный стиль
+    const clearBtn = document.querySelector(`[data-column="${columnName}"] .filter-clear-btn`);
+    const filterContainer = document.querySelector(`[data-column="${columnName}"]`);
+    
+    if (clearBtn && filterContainer) {
+        clearBtn.style.display = 'none';
+        filterContainer.classList.remove('filter-active');
+    }
+    
+    // Сбрасываем тип фильтра на "содержит"
+    const filterSelect = document.querySelector(`[data-column="${columnName}"] .filter-type-select`);
+    if (filterSelect) {
+        filterSelect.value = 'contains';
+    }
+    
+    // Применяем фильтры через сервер
+    applyServerFilters();
+}
+
+function applyServerFilters() {
+    console.log('🔄 Применяем фильтры через сервер...');
+    console.log('columnFilters:', columnFilters);
+    console.log('columnFilterTypes:', columnFilterTypes);
+    
+    // Строим URL с параметрами фильтров
+    const url = new URL(window.location);
+    
+    // Очищаем старые параметры фильтров
+    for (const key of url.searchParams.keys()) {
+        if (key.startsWith('filter_') || key.startsWith('filter_type_')) {
+            url.searchParams.delete(key);
+        }
+    }
+    
+    // Добавляем новые параметры фильтров
+    for (const [columnName, filterValue] of Object.entries(columnFilters)) {
+        const filterType = columnFilterTypes[columnName] || 'contains';
+        console.log(`🔍 Добавляем фильтр: ${columnName} = "${filterValue}" (тип: ${filterType})`);
+        
+        // Для фильтров empty/not_empty используем специальное значение
+        if (filterType === 'empty' || filterType === 'not_empty') {
+            url.searchParams.set(`filter_${columnName}`, 'special');
+            url.searchParams.set(`filter_type_${columnName}`, filterType);
+        } else if (filterValue.trim() !== '') {
+            url.searchParams.set(`filter_${columnName}`, filterValue);
+            url.searchParams.set(`filter_type_${columnName}`, filterType);
+        }
+    }
+    
+    // Сбрасываем на первую страницу при изменении фильтров
+    url.searchParams.set('page', '1');
+    
+    console.log(`🔗 Переходим по URL: ${url.toString()}`);
+    
+    // Переходим на новую страницу с фильтрами
+    window.location.href = url.toString();
+}
+
+function updateRecordCounter(visibleCount, totalCount) {
+    const counterElement = document.querySelector('.text-muted');
+    if (counterElement && counterElement.textContent.includes('Показано')) {
+        if (visibleCount === totalCount) {
+            // Если все записи видны, показываем обычный счетчик
+            const pageInfo = counterElement.textContent.match(/Показано (\d+)-(\d+) из (\d+) записей/);
+            if (pageInfo) {
+                counterElement.textContent = `Показано ${pageInfo[1]}-${pageInfo[2]} из ${pageInfo[3]} записей`;
+            }
+        } else {
+            // Если есть фильтры, показываем отфильтрованный счетчик
+            counterElement.textContent = `Отфильтровано: показано ${visibleCount} из ${totalCount} записей`;
+            counterElement.style.color = '#667eea';
+            counterElement.style.fontWeight = '500';
+        }
+    }
+}
+
+function clearAllFilters() {
+    console.log('🧹 Очищаем все фильтры');
+    
+    // Очищаем все поля фильтров
+    const filterInputs = document.querySelectorAll('.column-filter');
+    filterInputs.forEach(input => {
+        input.value = '';
+        input.disabled = false;
+        input.placeholder = 'Значение для поиска...';
+    });
+    
+    // Сбрасываем все селекторы типов фильтров
+    const filterSelects = document.querySelectorAll('.filter-type-select');
+    filterSelects.forEach(select => {
+        select.value = 'contains';
+    });
+    
+    // Скрываем все кнопки очистки
+    const clearBtns = document.querySelectorAll('.filter-clear-btn');
+    clearBtns.forEach(btn => {
+        btn.style.display = 'none';
+    });
+    
+    // Убираем активные стили
+    const filterContainers = document.querySelectorAll('.filter-container');
+    filterContainers.forEach(container => {
+        container.classList.remove('filter-active');
+    });
+    
+    // Очищаем объекты фильтров
+    columnFilters = {};
+    columnFilterTypes = {};
+    
+    // Переходим на страницу без фильтров
+    const url = new URL(window.location);
+    
+    // Удаляем все параметры фильтров
+    for (const key of url.searchParams.keys()) {
+        if (key.startsWith('filter_')) {
+            url.searchParams.delete(key);
+        }
+    }
+    
+    // Сбрасываем на первую страницу
+    url.searchParams.set('page', '1');
+    
+    console.log(`🔗 Переходим по URL без фильтров: ${url.toString()}`);
+    window.location.href = url.toString();
+}
+
+function initializeColumnFilters() {
+    console.log('🔧 Инициализация фильтров столбцов...');
+    
+    // Инициализируем фильтры из URL параметров
+    const url = new URL(window.location);
+    columnFilters = {};
+    columnFilterTypes = {};
+    
+    for (const [key, value] of url.searchParams.entries()) {
+        if (key.startsWith('filter_') && !key.startsWith('filter_type_') && value.trim() !== '') {
+            const columnName = key.substring(7); // Убираем префикс 'filter_'
+            columnFilters[columnName] = value;
+            
+            // Получаем тип фильтра
+            const filterTypeKey = `filter_type_${columnName}`;
+            const filterType = url.searchParams.get(filterTypeKey) || 'contains';
+            columnFilterTypes[columnName] = filterType;
+            
+            // Устанавливаем тип фильтра в селекторе
+            const filterSelect = document.querySelector(`[data-column="${columnName}"] .filter-type-select`);
+            if (filterSelect) {
+                filterSelect.value = filterType;
+                console.log(`🔧 Установлен тип фильтра для ${columnName}: ${filterType}`);
+            } else {
+                console.error(`❌ Селектор не найден для столбца: ${columnName}`);
+            }
+            
+            // Обновляем состояние поля ввода
+            const filterInput = document.querySelector(`[data-column="${columnName}"] .column-filter`);
+            if (filterInput) {
+                filterInput.value = value;
+                if (filterType === 'empty' || filterType === 'not_empty') {
+                    filterInput.disabled = true;
+                    filterInput.placeholder = filterType === 'empty' ? 'Показывать только пустые' : 'Показывать только заполненные';
+                } else {
+                    filterInput.disabled = false;
+                    filterInput.placeholder = filterType === 'not_contains' ? 'Значение для исключения...' : 'Значение для поиска...';
+                }
+            }
+            
+            // Показываем кнопку очистки и активный стиль
+            const clearBtn = document.querySelector(`[data-column="${columnName}"] .filter-clear-btn`);
+            const filterContainer = document.querySelector(`[data-column="${columnName}"]`);
+            
+            if (clearBtn && filterContainer) {
+                clearBtn.style.display = 'flex';
+                filterContainer.classList.add('filter-active');
+            }
+        }
+    }
+    
+    console.log(`🔧 Инициализировано фильтров: ${Object.keys(columnFilters).length}`);
+    if (Object.keys(columnFilters).length > 0) {
+        console.log('🔧 Активные фильтры:', columnFilters);
+        console.log('🔧 Типы фильтров:', columnFilterTypes);
+    }
+    
+    // Восстанавливаем фокус на последнем активном поле фильтра
+    restoreFilterFocus();
+    
+    // Тестируем создание меню
+    console.log('🔧 Тестируем создание меню...');
+    const testMenus = document.querySelectorAll('.filter-type-menu');
+    console.log(`🔧 Найдено меню: ${testMenus.length}`);
+    testMenus.forEach((menu, index) => {
+        console.log(`🔧 Меню ${index}:`, menu.id, 'опций:', menu.querySelectorAll('.filter-type-option').length);
+    });
+    
+    // Добавляем глобальную функцию для тестирования
+    window.testFilterMenu = function(columnName) {
+        console.log(`🧪 Тестируем меню для столбца: ${columnName}`);
+        const menu = document.getElementById(`filter-menu-${columnName}`);
+        if (menu) {
+            menu.style.position = 'fixed';
+            menu.style.top = '100px';
+            menu.style.left = '100px';
+            menu.style.zIndex = '99999';
+            menu.style.display = 'block';
+            menu.style.backgroundColor = 'yellow';
+            menu.style.border = '3px solid red';
+            console.log(`🧪 Меню показано принудительно:`, menu);
+        } else {
+            console.error(`🧪 Меню не найдено: filter-menu-${columnName}`);
+        }
+    };
+    
+    // Создаем тестовое меню в центре экрана
+    window.createTestMenu = function() {
+        console.log(`🧪 Создаем тестовое меню в центре экрана`);
+        
+        // Удаляем старое тестовое меню если есть
+        const oldTestMenu = document.getElementById('test-filter-menu');
+        if (oldTestMenu) {
+            oldTestMenu.remove();
+        }
+        
+        // Создаем новое тестовое меню
+        const testMenu = document.createElement('div');
+        testMenu.id = 'test-filter-menu';
+        testMenu.innerHTML = `
+            <div style="padding: 10px; background: yellow; border: 3px solid red; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 999999; min-width: 200px;">
+                <div style="padding: 8px; cursor: pointer; background: white; margin: 2px; border: 1px solid #ccc;">🔍 Содержит</div>
+                <div style="padding: 8px; cursor: pointer; background: white; margin: 2px; border: 1px solid #ccc;">🔍➖ Не содержит</div>
+                <div style="padding: 8px; cursor: pointer; background: white; margin: 2px; border: 1px solid #ccc;">⬜ Пустые</div>
+                <div style="padding: 8px; cursor: pointer; background: white; margin: 2px; border: 1px solid #ccc;">☑️ Не пустые</div>
+                <div style="padding: 8px; cursor: pointer; background: red; color: white; margin: 2px; text-align: center;" onclick="document.getElementById('test-filter-menu').remove()">ЗАКРЫТЬ</div>
+            </div>
+        `;
+        
+        document.body.appendChild(testMenu);
+        console.log(`🧪 Тестовое меню создано:`, testMenu);
+    };
+    
+    // Добавляем обработчик для закрытия меню при клике вне его
+    document.addEventListener('click', function(event) {
+        const allMenus = document.querySelectorAll('.filter-type-menu');
+        const allIcons = document.querySelectorAll('.filter-icon');
+        
+        let clickedOnMenu = false;
+        let clickedOnIcon = false;
+        
+        // Проверяем, кликнули ли на меню или иконку
+        allMenus.forEach(menu => {
+            if (menu.contains(event.target)) {
+                clickedOnMenu = true;
+            }
+        });
+        
+        allIcons.forEach(icon => {
+            if (icon.contains(event.target)) {
+                clickedOnIcon = true;
+            }
+        });
+        
+        // Если кликнули не на меню и не на иконку, закрываем все меню
+        if (!clickedOnMenu && !clickedOnIcon) {
+            allMenus.forEach(menu => {
+                menu.classList.remove('show');
+                menu.style.visibility = 'hidden';
+                menu.style.opacity = '0';
+            });
+            allIcons.forEach(icon => {
+                icon.classList.remove('active');
+            });
+        }
+    });
+}
+
+// Удалено: ensureFilterInputVisible — использовалась для спец-логики одного столбца
+
+function restoreFilterFocus() {
+    // Проверяем, был ли фокус на поле фильтра
+    const lastFocusedFilter = sessionStorage.getItem('lastFocusedFilter');
+    if (lastFocusedFilter) {
+        const filterInput = document.querySelector(`[data-column="${lastFocusedFilter}"] .column-filter`);
+        if (filterInput) {
+            // Восстанавливаем фокус с небольшой задержкой
+            setTimeout(() => {
+                filterInput.focus();
+                // Устанавливаем курсор в конец текста
+                const length = filterInput.value.length;
+                filterInput.setSelectionRange(length, length);
+                console.log(`🔧 Восстановлен фокус на фильтре: ${lastFocusedFilter}`);
+            }, 100);
+        }
+        // Очищаем сохраненный фокус
+        sessionStorage.removeItem('lastFocusedFilter');
+    }
+}
+
+function saveFilterFocus(columnName) {
+    sessionStorage.setItem('lastFocusedFilter', columnName);
+    console.log(`🔧 Сохранен фокус для фильтра: ${columnName}`);
+}
+
+// Инициализация системы выделения строк после загрузки страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Ждем немного, чтобы система выделения строк инициализировалась
+    setTimeout(() => {
+        if (typeof tableSelector !== 'undefined') {
+            console.log('🎯 Система выделения строк подключена к table_view.html');
+            
+            // Добавляем дополнительную инициализацию для этой страницы
+            const table = document.querySelector('.data-table');
+            if (table) {
+                tableSelector.initializeTable(table, 0);
+                console.log('✅ Таблица в table_view.html инициализирована для выделения строк');
+            }
+        }
+    }, 500);
+    
+    // Инициализация редактирования для condition_weld
+    if ('{{ table_name }}' === 'condition_weld') {
+        initializeConditionWeldEditing();
+    }
+    
+    // Подсвечиваем строки с заполненной датой ремонта для weld_repair_log
+    if ('{{ table_name }}' === 'weld_repair_log') {
+        // Нормализуем отображение дат (убираем время)
+        if (typeof normalizeRepairDateCells === 'function') {
+            normalizeRepairDateCells();
+        }
+        if (typeof highlightRepairedRows === 'function') {
+            highlightRepairedRows();
+        } else {
+            setTimeout(() => {
+                try { typeof highlightRepairedRows === 'function' && highlightRepairedRows(); } catch(e) { console.warn('highlightRepairedRows not available yet'); }
+            }, 150);
+        }
+        // Используем стандартную строку фильтров без принудительного вмешательства
+    }
+});
+
+// Функция для подсветки строк с заполненной датой ремонта
+function highlightRepairedRows() {
+    console.log('🔍 Поиск строк с заполненной датой ремонта...');
+    
+    // Проверяем, что мы на странице weld_repair_log
+    if (window.location.pathname !== '/table/weld_repair_log') {
+        console.log('❌ Не страница weld_repair_log, пропускаем подсветку');
+        return;
+    }
+    
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        console.log('❌ Таблица не найдена');
+        return;
+    }
+    
+    const rows = table.querySelectorAll('tbody tr');
+    console.log(`📊 Найдено строк: ${rows.length}`);
+    
+    let highlightedCount = 0;
+    
+    rows.forEach((row, index) => {
+        // Ищем ячейку с датой сварки после ремонта
+        const repairDateCell = row.querySelector('td[data-column="Дата сварки после ремонта"]');
+        
+        if (repairDateCell) {
+            const repairDate = repairDateCell.textContent.trim();
+            console.log(`Строка ${index + 1}: дата ремонта = "${repairDate}"`);
+            
+            // Проверяем, есть ли дата ремонта (не пустая и не NULL)
+            if (repairDate && repairDate !== 'NULL' && repairDate !== '') {
+                row.classList.add('repaired-row');
+                highlightedCount++;
+                console.log(`✅ Строка ${index + 1} подсвечена (дата ремонта: ${repairDate})`);
+            } else {
+                row.classList.remove('repaired-row');
+            }
+        }
+    });
+    
+    console.log(`🎨 Подсвечено строк: ${highlightedCount}`);
+}
+
+// Экспорт ключевых функций в глобальную область (для использования из других модулей/скриптов)
+window.highlightRepairedRows = highlightRepairedRows;
+window.normalizeRepairDateCells = normalizeRepairDateCells;
+// Приводит отображение столбца "Дата сварки после ремонта" к формату без времени
+function normalizeRepairDateCells() {
+    if (window.location.pathname !== '/table/weld_repair_log') {
+        return;
+    }
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        return;
+    }
+    const cells = table.querySelectorAll('td[data-column="Дата сварки после ремонта"]');
+    cells.forEach(cell => {
+        const raw = (cell.textContent || '').trim();
+        if (!raw) return;
+        let onlyDate = raw;
+        if (onlyDate.includes('T')) {
+            onlyDate = onlyDate.split('T')[0];
+        }
+        if (onlyDate.includes(' ')) {
+            onlyDate = onlyDate.split(' ')[0];
+        }
+        if (onlyDate && onlyDate !== raw) {
+            cell.textContent = onlyDate;
+        }
+    });
+}
+
+// Функция для подсветки строк без даты сварки в condition_weld
+function highlightRowsWithoutWeldDate() {
+    console.log('🔍 Поиск строк без даты сварки в condition_weld...');
+    
+    // Проверяем, что мы на странице condition_weld
+    if (window.location.pathname !== '/table/condition_weld') {
+        console.log('❌ Не страница condition_weld, пропускаем подсветку');
+        return;
+    }
+    
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        console.log('❌ Таблица не найдена');
+        return;
+    }
+    
+    const rows = table.querySelectorAll('tbody tr');
+    console.log(`📊 Найдено строк: ${rows.length}`);
+    
+    let highlightedCount = 0;
+    
+    rows.forEach((row, index) => {
+        // Ищем ячейку с датой сварки
+        const weldDateCell = row.querySelector('td[data-column="Дата_сварки"]');
+        
+        if (weldDateCell) {
+            const weldDate = weldDateCell.textContent.trim();
+            console.log(`Строка ${index + 1}: дата сварки = "${weldDate}"`);
+            
+            // Проверяем, есть ли дата сварки (не пустая и не NULL)
+            if (!weldDate || weldDate === 'NULL' || weldDate === '') {
+                row.classList.add('no-weld-date-row');
+                highlightedCount++;
+                console.log(`✅ Строка ${index + 1} подсвечена красным (нет даты сварки)`);
+            } else {
+                row.classList.remove('no-weld-date-row');
+            }
+        }
+    });
+    
+    console.log(`🎨 Подсвечено строк без даты сварки: ${highlightedCount}`);
+}
+
+// NOTE: Функция initializeConditionWeldEditing определена ниже (строка 4062)
+// Эта первая версия удалена для избежания двойных обработчиков событий
+
+function isEditableColumn(column) {
+    const editableColumns = [
+        'стык', 'Код_удаления', 'Тип_шва'
+    ];
+    
+    // Специальная обработка для таблицы слов_клейм_факт
+    if ('{{ table_name }}' === 'слов_клейм_факт') {
+        return column === 'ФИО';
+    }
+    
+    return editableColumns.includes(column);
+}
+
+// NOTE: Функция openEditModal использует новую версию showEditModal (строки 4125+)
+
+// Переменная для хранения выбранных записей
+let selectedRecords = new Set();
+
+// Функции для работы с чекбоксами
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const recordCheckboxes = document.querySelectorAll('.record-checkbox');
+    
+    console.log('toggleSelectAll вызвана, selectAllCheckbox.checked:', selectAllCheckbox?.checked);
+    console.log('Найдено чекбоксов записей:', recordCheckboxes.length);
+    
+    if (selectAllCheckbox.checked) {
+        let addedCount = 0;
+        recordCheckboxes.forEach(checkbox => {
+            const value = checkbox.value;
+            if (value && value !== 'null' && value !== 'undefined' && value !== '') {
+                checkbox.checked = true;
+                selectedRecords.add(value);
+                addedCount++;
+            }
+        });
+        console.log('Добавлено записей в выбор:', addedCount);
+    } else {
+        let removedCount = 0;
+        recordCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            const value = checkbox.value;
+            if (value) {
+                selectedRecords.delete(value);
+                removedCount++;
+            }
+        });
+        console.log('Удалено записей из выбора:', removedCount);
+    }
+    updateRecordSelectionCount();
+}
+
+function updateRecordSelectionCount() {
+    console.log('🔵🔵🔵 updateRecordSelectionCount НАЧАЛАСЬ!!! 🔵🔵🔵');
+    const count = selectedRecords.size;
+    console.log('Размер selectedRecords:', count);
+    console.log('Содержимое selectedRecords:', Array.from(selectedRecords));
+    
+    const selectedCountElement = document.getElementById('selected-count');
+    const transferButton = document.getElementById('transfer-selected-btn');
+    const deletePipelineButton = document.getElementById('delete-selected-pipeline-btn');
+    
+    console.log('selectedCountElement найден:', !!selectedCountElement);
+    console.log('transferButton найден:', !!transferButton);
+    
+    if (selectedCountElement) {
+        selectedCountElement.textContent = count;
+        console.log('Счетчик обновлен на:', count);
+    } else {
+        console.warn('Элемент selected-count не найден!');
+    }
+    
+    if (transferButton) {
+        const shouldShow = count > 0;
+        transferButton.style.display = shouldShow ? 'inline-block' : 'none';
+        console.log('Кнопка переноса:', shouldShow ? 'показана' : 'скрыта');
+    } else {
+        console.warn('Кнопка transfer-selected-btn не найдена!');
+    }
+
+    if (deletePipelineButton) {
+        const shouldShow = count > 0;
+        deletePipelineButton.style.display = shouldShow ? 'inline-block' : 'none';
+        console.log('Кнопка удаления из pipeline:', shouldShow ? 'показана' : 'скрыта');
+    }
+    
+    // Показываем кнопку редактирования только если выбрана ровно одна запись
+    const editButton = document.getElementById('edit-selected-btn');
+    console.log('edit-selected-btn найден:', !!editButton);
+    
+    if (!editButton) {
+        console.warn('⚠️ Кнопка edit-selected-btn не найдена в DOM!');
+        console.log('Текущий URL:', window.location.href);
+        console.log('table_name из шаблона:', '{{ table_name }}');
+        console.log('Пробуем найти любые кнопки с id содержащим "edit":');
+        const allEditButtons = document.querySelectorAll('[id*="edit"]');
+        console.log('Найдено кнопок с id содержащим "edit":', allEditButtons.length);
+        allEditButtons.forEach(btn => console.log('  -', btn.id, btn));
+        
+        // Проверяем, есть ли вообще кнопка на странице
+        const anyButtons = document.querySelectorAll('button');
+        console.log('Всего кнопок на странице:', anyButtons.length);
+        console.log('table_name === "weld_repair_log":', '{{ table_name }}' === 'weld_repair_log');
+    } else {
+        const shouldShowEdit = count === 1;
+        console.log('shouldShowEdit (count === 1):', shouldShowEdit, 'count:', count);
+        console.log('Текущий стиль до изменения:', editButton.style.display, 'computed:', window.getComputedStyle(editButton).display);
+        editButton.style.display = shouldShowEdit ? 'inline-block' : 'none';
+        console.log('Кнопка редактирования:', shouldShowEdit ? 'показана' : 'скрыта');
+        console.log('Стиль кнопки после изменения:', editButton.style.display);
+        console.log('Computed стиль после изменения:', window.getComputedStyle(editButton).display);
+        
+        // Дополнительно проверяем видимость
+        if (shouldShowEdit) {
+            console.log('✅ Кнопка должна быть видна');
+            console.log('offsetParent:', editButton.offsetParent !== null ? 'видна' : 'скрыта');
+        }
+    }
+    console.log('=== Конец updateRecordSelectionCount ===');
+}
+
+// Обработчик изменения чекбоксов
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('record-checkbox')) {
+        const recordId = e.target.value;
+        console.log('=== Обработчик чекбокса сработал ===');
+        console.log('Чекбокс изменен:', recordId, e.target.checked);
+        console.log('Текущий размер selectedRecords до изменения:', selectedRecords.size);
+        
+        if (e.target.checked) {
+            selectedRecords.add(recordId);
+            console.log('✅ Запись добавлена в выбор. Новый размер:', selectedRecords.size);
+            console.log('Содержимое selectedRecords:', Array.from(selectedRecords));
+            
+            // Специальная обработка для таблицы слов_клейм_факт
+            if ('{{ table_name }}' === 'слов_клейм_факт') {
+                // Открываем форму редактирования ФИО
+                openSlovKleimoFactEditModal(recordId, 'ФИО', '');
+                // Снимаем галочку после открытия формы
+                e.target.checked = false;
+                selectedRecords.delete(recordId);
+                updateRecordSelectionCount();
+                return;
+            }
+        } else {
+            selectedRecords.delete(recordId);
+            console.log('❌ Запись удалена из выбора. Новый размер:', selectedRecords.size);
+            console.log('Содержимое selectedRecords:', Array.from(selectedRecords));
+        }
+        console.log('Вызываем updateRecordSelectionCount()...');
+        console.log('Тип функции updateRecordSelectionCount:', typeof updateRecordSelectionCount);
+        
+        // Вызываем с обработкой ошибок
+        try {
+            updateRecordSelectionCount();
+            console.log('updateRecordSelectionCount вызвана успешно');
+        } catch(e) {
+            console.error('Ошибка при вызове updateRecordSelectionCount:', e);
+        }
+    } else {
+        console.log('Изменение не связано с record-checkbox');
+    }
+});
+
+// Функция переноса выбранных записей в журнал ремонтов
+async function transferSelectedToRepairLog() {
+    console.log('transferSelectedToRepairLog вызвана');
+    console.log('Размер selectedRecords:', selectedRecords.size);
+    console.log('Содержимое selectedRecords:', Array.from(selectedRecords));
+    
+    if (selectedRecords.size === 0) {
+        alert('Пожалуйста, выберите записи для переноса');
+        return;
+    }
+    
+    if (!confirm(`Вы уверены, что хотите перенести ${selectedRecords.size} записей в журнал ремонтов?`)) {
+        return;
+    }
+    
+    try {
+        // Получаем данные выбранных записей
+        const selectedData = [];
+        const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+        
+        checkboxes.forEach(checkbox => {
+            const recordId = checkbox.value;
+            const row = checkbox.closest('tr');
+            const cells = row.querySelectorAll('td');
+            
+            // Собираем данные из строки таблицы
+            const recordData = {
+                app_row_id: recordId
+            };
+            
+            // Добавляем данные из ячеек (пропускаем первую ячейку с чекбоксом)
+            for (let i = 1; i < cells.length; i++) {
+                const cell = cells[i];
+                const columnIndex = i - 1; // Индекс столбца (без учета чекбокса)
+                const columnName = document.querySelector(`th:nth-child(${i + 1})`).textContent.trim();
+                
+                // Получаем текст из ячейки, убирая HTML теги
+                const cellText = cell.textContent || cell.innerText || '';
+                recordData[columnName] = cellText.trim();
+            }
+            
+            selectedData.push(recordData);
+        });
+        
+        // Отправляем запрос на сервер
+        const response = await fetch('/api/transfer_to_weld_repair_log', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                records: selectedData
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`Успешно перенесено ${result.transferred_count} записей в журнал ремонтов`);
+            
+            // Снимаем выделение с чекбоксов
+            selectedRecords.clear();
+            document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('select-all-checkbox').checked = false;
+            updateRecordSelectionCount();
+            
+            // Перезагружаем страницу для обновления данных
+            window.location.reload();
+        } else {
+            alert(`Ошибка: ${result.message}`);
+        }
+        
+    } catch (error) {
+        console.error('Ошибка при переносе записей:', error);
+        alert('Ошибка при переносе записей: ' + error.message);
+    }
+}
+
+// Массовое удаление из pipeline_weld_joint_iso по выбранным строкам condition_weld
+async function deleteSelectedFromPipeline() {
+    if (selectedRecords.size === 0) {
+        alert('Выберите записи для удаления');
+        return;
+    }
+
+    if (!confirm(`Удалить ${selectedRecords.size} записей из pipeline_weld_joint_iso?`)) {
+        return;
+    }
+
+    try {
+        const recordIds = Array.from(selectedRecords);
+
+        const response = await fetch('/api/condition_weld/bulk_delete_by_ids', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ record_ids: recordIds })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert(`Удалено: ${result.deleted_count}`);
+
+            // Удаляем строки из DOM для выбранных ID
+            document.querySelectorAll('.record-checkbox:checked').forEach(cb => {
+                const row = cb.closest('tr');
+                if (row) row.remove();
+            });
+
+            // Сброс выбора
+            selectedRecords.clear();
+            const selectAll = document.getElementById('select-all-checkbox');
+            if (selectAll) selectAll.checked = false;
+            updateRecordSelectionCount();
+        } else {
+            alert(`Ошибка: ${result.message || 'неизвестная'}`);
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Ошибка удаления: ' + e.message);
+    }
+}
+
+// Функция для редактирования выбранной записи
+function editSelectedRecord() {
+    console.log('Редактирование выбранной записи');
+    console.log('Выбранные записи:', Array.from(selectedRecords));
+    
+    if (selectedRecords.size === 0) {
+        alert('Выберите запись для редактирования');
+        return;
+    }
+    
+    if (selectedRecords.size > 1) {
+        alert('Выберите только одну запись для редактирования');
+        return;
+    }
+    
+    const recordId = Array.from(selectedRecords)[0];
+    console.log('ID выбранной записи для редактирования:', recordId);
+    
+    if (recordId) {
+        // Открываем модальное окно редактирования
+        openRecordEditModal(recordId);
+    } else {
+        alert('Ошибка: не удалось получить ID выбранной записи');
+    }
+}
+
+// Функция для открытия модального окна редактирования записи
+async function openRecordEditModal(recordId) {
+    console.log('Открытие модального окна для записи:', recordId);
+    
+    try {
+        // Загружаем данные записи
+        const response = await fetch(`/api/weld_repair_log/${recordId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+        
+        const record = data.record;
+        console.log('Загружена запись для редактирования:', record);
+        
+        // Заполняем модальное окно данными
+        fillEditModal(record);
+        
+        // Показываем модальное окно
+        const modal = new bootstrap.Modal(document.getElementById('weldRepairEditModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Ошибка при загрузке записи:', error);
+        alert('Ошибка при загрузке записи: ' + error.message);
+    }
+}
+
+// Функция для заполнения модального окна данными записи
+function fillEditModal(record) {
+    console.log('Заполнение модального окна данными:', record);
+    
+    // Заполняем поля формы
+    const fields = {
+        'edit-id': record.app_row_id,
+        'view-drawing': record.Чертеж || '',
+        'view-line': record.Линия || '',
+        'view-diameter': record['Диаметр и толщина стенки'] || '',
+        'view-joint': record['№ стыка'] || '',
+        'view-weld-date': record['Дата сварки'] || '',
+        'view-sampling': record['Размер выборки (длина, ширина, глубина), мм'] || '',
+        'view-control-results': record['Способ и результаты контроля выборки'] || '',
+        'edit-steel-grade': record['Марка стали'] || '',
+        'edit-welder': record['Фамилия, инициалы, клеймо сварщика допустившего брак'] || '',
+        'edit-weld-type': record['Вид сварки'] || '',
+        'edit-repair-count': record['Число ремонтов на одном участке'] || '',
+        'edit-repair-date': record['Дата сварки после ремонта'] || '',
+        'edit-responsible': record['Ответственный'] || ''
+    };
+    
+    // Заполняем все поля
+    Object.entries(fields).forEach(([fieldId, value]) => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.value = value;
+            console.log(`Заполнено поле ${fieldId}: ${value}`);
+        } else {
+            console.warn(`Поле ${fieldId} не найдено`);
+        }
+    });
+}
+
+// Функция для сохранения записи weld_repair_log
+async function saveWeldRepairRecord() {
+    console.log('Сохранение записи weld_repair_log');
+    
+    const form = document.getElementById('weld-repair-edit-form');
+    const formData = new FormData(form);
+    const recordData = Object.fromEntries(formData.entries());
+    
+    console.log('Собранные данные формы:', recordData);
+    
+    const recordId = recordData.app_row_id;
+    if (!recordId) {
+        alert('Ошибка: не найден ID записи');
+        console.error('ID записи не найден в данных:', recordData);
+        return;
+    }
+    
+    try {
+        console.log('Отправка данных для сохранения:', recordData);
+        
+        const response = await fetch(`/api/weld_repair_log/${recordId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(recordData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Запись успешно сохранена!');
+            
+            // Закрываем модальное окно
+            const modal = bootstrap.Modal.getInstance(document.getElementById('weldRepairEditModal'));
+            modal.hide();
+            
+            // Перезагружаем страницу для обновления данных
+            window.location.reload();
+        } else {
+            alert('Ошибка при сохранении: ' + result.message);
+        }
+        
+    } catch (error) {
+        console.error('Ошибка при сохранении записи:', error);
+        alert('Ошибка при сохранении записи: ' + error.message);
+    }
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOMContentLoaded для table_view.html');
+    console.log('table_name:', '{{ table_name }}');
+    
+    // Проверяем наличие кнопки редактирования
+    const editButton = document.getElementById('edit-selected-btn');
+    console.log('Кнопка edit-selected-btn найдена при загрузке:', !!editButton);
+    
+    // Инициализируем счетчик выбранных записей
+    updateRecordSelectionCount();
+});
+
+// Функция для открытия модального окна редактирования слов_клейм_факт
+function openSlovKleimoFactEditModal(recordId, column, currentValue) {
+    console.log(`🔧 Открытие модального окна для редактирования слов_клейм_факт: ID=${recordId}, Column=${column}, Value=${currentValue}`);
+    
+    // Загружаем данные записи
+    fetch(`/api/slov_kleimo_fact/${recordId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSlovKleimoFactEditModal(data.record, column, currentValue);
+            } else {
+                showNotification('❌ Ошибка загрузки данных: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки данных:', error);
+            showNotification('❌ Ошибка загрузки данных', 'error');
+        });
+}
+
+// Функция для показа модального окна редактирования слов_клейм_факт
+function showSlovKleimoFactEditModal(record, column, currentValue) {
+    console.log('🔧 Вызов showSlovKleimoFactEditModal, делегируем fioManager');
+    
+    // Делегируем вызов нашему улучшенному менеджеру ФИО
+    if (window.fioManager) {
+        window.fioManager.showEnhancedSlovKleimoFactEditModal(record);
+    } else {
+        console.error('❌ fioManager не найден!');
+        alert('Ошибка: Менеджер ФИО не загружен. Перезагрузите страницу.');
+    }
+}
+
+// Функция для сохранения изменений в слов_клейм_факт
+async function saveSlovKleimoFactChanges(recordId) {
+    try {
+        const fioValue = document.getElementById('edit-fio').value;
+        const primValue = document.getElementById('edit-prim').value;
+        
+        const response = await fetch(`/api/slov_kleimo_fact/${recordId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                ФИО: fioValue,
+                Примечание: primValue
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Закрываем модальное окно
+            const modal = bootstrap.Modal.getInstance(document.getElementById('slovKleimoFactEditModal'));
+            modal.hide();
+            
+            // Показываем уведомление об успехе
+            showNotification('✅ Запись успешно обновлена', 'success');
+            
+            // Перезагружаем страницу для обновления данных
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showNotification('❌ Ошибка при сохранении: ' + result.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Ошибка при сохранении записи:', error);
+        showNotification('❌ Ошибка при сохранении записи: ' + error.message, 'error');
+    }
+}
+</script>
+
+{% if table_name == 'weld_repair_log' %}
+<!-- Модальное окно для редактирования weld_repair_log -->
+<div class="modal fade" id="weldRepairEditModal" tabindex="-1" aria-labelledby="weldRepairEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="weldRepairEditModalLabel">
+                    <i class="fas fa-edit me-2"></i>Редактирование записи ЖРСС
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body">
+                <form id="weld-repair-edit-form">
+                    <input type="hidden" id="edit-id" name="app_row_id">
+                    
+                    <!-- Только для просмотра (read-only) -->
+                    <div class="readonly-section">
+                        <div class="alert alert-info mb-3">
+                            <strong>Информация для просмотра:</strong> Эти поля нельзя редактировать
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <div class="form-row">
+                                    <label for="view-drawing" class="form-label">Чертеж:</label>
+                                    <input type="text" class="form-control form-control-sm" id="view-drawing" readonly style="background-color: #f8f9fa;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-row">
+                                    <label for="view-line" class="form-label">Линия:</label>
+                                    <input type="text" class="form-control form-control-sm" id="view-line" readonly style="background-color: #f8f9fa;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-row">
+                                    <label for="view-diameter" class="form-label">Диаметр и толщина стенки:</label>
+                                    <input type="text" class="form-control form-control-sm" id="view-diameter" readonly style="background-color: #f8f9fa;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-row">
+                                    <label for="view-joint" class="form-label">№ стыка:</label>
+                                    <input type="text" class="form-control form-control-sm" id="view-joint" readonly style="background-color: #f8f9fa;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label for="view-weld-date" class="form-label">Дата сварки:</label>
+                                    <input type="text" class="form-control form-control-sm" id="view-weld-date" readonly style="background-color: #f8f9fa;">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label for="view-sampling" class="form-label">Размер выборки:</label>
+                                    <input type="text" class="form-control form-control-sm" id="view-sampling" readonly style="background-color: #f8f9fa;">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label for="view-control-results" class="form-label">Контроль выборки:</label>
+                                    <input type="text" class="form-control form-control-sm" id="view-control-results" readonly style="background-color: #f8f9fa;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Редактируемые поля -->
+                    <div class="editable-section">
+                        <div class="alert alert-success mb-3">
+                            <strong>Редактируемые поля:</strong> Эти поля можно изменять
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label for="edit-steel-grade" class="form-label">Марка стали:</label>
+                                    <select class="form-select form-select-sm" id="edit-steel-grade" name="Марка стали">
+                                        <option value="">Выберите марку стали</option>
+                                        <option value="M01">M01</option>
+                                        <option value="M11">M11</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label for="edit-welder" class="form-label">Сварщик (брак):</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit-welder" name="Фамилия, инициалы, клеймо сварщика допустившего брак">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label for="edit-weld-type" class="form-label">Вид сварки:</label>
+                                    <select class="form-select form-select-sm" id="edit-weld-type" name="Вид сварки">
+                                        <option value="">Выберите вид сварки</option>
+                                        <option value="РАД">РАД</option>
+                                        <option value="РД">РД</option>
+                                        <option value="РАД+РД">РАД+РД</option>
+                                        <option value="МАДП">МАДП</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label for="edit-repair-count" class="form-label">Число ремонтов:</label>
+                                    <input type="number" class="form-control form-control-sm" id="edit-repair-count" name="Число ремонтов на одном участке" min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label for="edit-repair-date" class="form-label">Дата ремонта:</label>
+                                    <input type="date" class="form-control form-control-sm" id="edit-repair-date" name="Дата сварки после ремонта">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-row">
+                                    <label for="edit-responsible" class="form-label">Ответственный:</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit-responsible" name="Ответственный">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Отмена
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveWeldRepairRecord()">
+                    <i class="fas fa-save me-2"></i>Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+// Переопределяем функции из base.js для table_view.html (после загрузки base.js)
+// Эти функции должны загружаться ПОСЛЕ base.js, чтобы иметь приоритет
+window.applyColumnSelection = function() {
+    console.log('🔧 applyColumnSelection из table_view.html вызвана');
+    
+    const checkedColumns = Array.from(document.querySelectorAll('.column-checkbox-input:checked'))
+        .map(cb => cb.value);
+    
+    console.log('🔧 Найдено выбранных столбцов:', checkedColumns.length);
+    console.log('🔧 Выбранные столбцы:', checkedColumns);
+    
+    const currentUrl = new URL(window.location);
+    
+    // Если не выбрано ни одного столбца, передаем пустую строку
+    if (checkedColumns.length === 0) {
+        currentUrl.searchParams.set('columns', '');
+    } else {
+        currentUrl.searchParams.set('columns', checkedColumns.join(','));
+    }
+    
+    currentUrl.searchParams.set('page', '1'); // Сбрасываем на первую страницу
+    
+    console.log('🔧 Переходим на URL:', currentUrl.toString());
+    window.location.href = currentUrl.toString();
+};
+
+window.selectAllColumns = function() {
+    console.log('🔧 selectAllColumns из table_view.html вызвана');
+    document.querySelectorAll('.column-checkbox-input').forEach(cb => {
+        cb.checked = true;
+    });
+    console.log('🔧 Все столбцы выбраны');
+};
+
+window.deselectAllColumns = function() {
+    console.log('🔧 deselectAllColumns из table_view.html вызвана');
+    document.querySelectorAll('.column-checkbox-input').forEach(cb => {
+        cb.checked = false;
+    });
+    console.log('🔧 Все столбцы сняты');
+};
+
+window.selectDefaultColumns = function() {
+    console.log('🔧 selectDefaultColumns из table_view.html вызвана');
+    // Показываем все столбцы по умолчанию
+    document.querySelectorAll('.column-checkbox-input').forEach(cb => {
+        cb.checked = true;
+    });
+    console.log('🔧 Столбцы по умолчанию выбраны');
+};
+
+console.log('🔧 Функции table_view.html загружены:', {
+    applyColumnSelection: typeof window.applyColumnSelection,
+    selectAllColumns: typeof window.selectAllColumns,
+    deselectAllColumns: typeof window.deselectAllColumns,
+    selectDefaultColumns: typeof window.selectDefaultColumns
+});
+</script>
+
+{% endblock %}
+
+<script>
+// Функции для управления столбцами (как в logs_lnk_table.html)
+// Эти функции теперь переопределены в начале файла через window.*
+
+function clearSearch() {
+    const searchInput = document.querySelector('input[name="search"]');
+    if (searchInput) {
+        searchInput.value = '';
+        // Очищаем сохраненную позицию курсора
+        sessionStorage.removeItem('searchCursorPosition');
+        document.getElementById('searchForm').submit();
+    }
+}
+
+</script>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация появления таблицы
+    const table = document.querySelector('.data-table');
+    if (table) {
+        table.style.opacity = '0';
+        table.style.transform = 'translateY(20px)';
+        table.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        
+        setTimeout(() => {
+            table.style.opacity = '1';
+            table.style.transform = 'translateY(0)';
+            
+            // Автоматически применяем авторазмер после появления таблицы
+            setTimeout(() => {
+                if (typeof autoResizeColumns === 'function') {
+                    autoResizeColumns();
+                }
+                // Дополнительно исправляем столбцы с датами
+                setTimeout(() => {
+                    if (typeof fixDateColumns === 'function') {
+                        fixDateColumns();
+                    }
+                    // Инициализируем перетаскивание столбцов
+                    setTimeout(() => {
+                        if (typeof initColumnResizing === 'function') {
+                            initColumnResizing();
+                        }
+                    }, 100);
+                    
+                    // Инициализируем фильтры столбцов
+                    initializeColumnFilters();
+                }, 200);
+            }, 100);
+        }, 100);
+    }
+    
+    // Автоматический поиск при вводе с сохранением фокуса
+    const searchInput = document.querySelector('input[name="search"]');
+    if (searchInput) {
+        let searchTimeout;
+        
+        // Автоматический поиск всегда включен
+        
+        // Показываем информацию о регистронезависимом поиске при фокусе
+        searchInput.addEventListener('focus', function() {
+            // Показываем информацию каждый раз при фокусе, если поле не пустое
+            if (this.value.trim()) {
+                const searchTerm = this.value;
+                const searchTermLower = searchTerm.toLowerCase();
+                showNotification(`🔍 Поиск: "${searchTerm}" и "${searchTermLower}" (регистронезависимый)`);
+            } else {
+                showNotification('💡 Поиск работает без учета регистра букв');
+            }
+        });
+        
+        // Автоматический поиск при вводе
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const searchTerm = this.value.trim();
+                if (searchTerm) {
+                    console.log(`🔍 Автоматический поиск: "${searchTerm}"`);
+                    // Перезагружаем страницу с параметром поиска
+                    const currentUrl = new URL(window.location);
+                    currentUrl.searchParams.set('search', searchTerm);
+                    currentUrl.searchParams.set('page', '1'); // Сбрасываем на первую страницу
+                    window.location.href = currentUrl.toString();
+                } else {
+                    // Если поле поиска пустое, убираем параметр поиска
+                    const currentUrl = new URL(window.location);
+                    currentUrl.searchParams.delete('search');
+                    currentUrl.searchParams.set('page', '1');
+                    window.location.href = currentUrl.toString();
+                }
+            }, 500); // Задержка 500ms для избежания частых запросов
+        });
+        
+        // Обработчик для кнопки очистки поиска
+        const clearSearchBtn = document.querySelector('button[onclick="clearSearch()"]');
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.delete('search');
+                currentUrl.searchParams.set('page', '1');
+                window.location.href = currentUrl.toString();
+            });
+        }
+        
+        // Если есть поисковый запрос в URL, показываем информацию
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchParam = urlParams.get('search');
+        if (searchParam) {
+            searchInput.value = searchParam;
+            
+            // Показываем информацию о текущем поиске
+            setTimeout(() => {
+                const totalRecords = parseInt('{{ total_records }}');
+                const currentRecords = parseInt('{{ records|length }}');
+                if (searchInput.value.trim()) {
+                    const searchTerm = searchInput.value;
+                    const searchTermLower = searchTerm.toLowerCase();
+                    showNotification(`🔍 Поиск: "${searchTerm}" и "${searchTermLower}" - найдено ${currentRecords} из ${totalRecords} записей (регистронезависимый)`);
+                }
+            }, 500);
+        } else {
+            // Если поле поиска пустое, устанавливаем на него фокус
+            searchInput.focus();
+        }
+    }
+    
+    // Автоматический авторазмер при изменении размера окна
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            if (typeof autoResizeColumns === 'function') {
+                console.log('🔄 Автоматический авторазмер при изменении размера окна');
+                autoResizeColumns();
+            }
+        }, 300);
+    });
+});
+
+
+// Функция toggleAutoSearch удалена - теперь используется простая перезагрузка страницы
+
+// Функция показа уведомления
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    
+    // Убираем уведомление через 3 секунды
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+// Функция экспорта отфильтрованных данных в Excel
+async function exportFilteredToExcel() {
+    const exportBtn = event.target;
+    const originalText = exportBtn.innerHTML;
+    
+    try {
+        // Показываем индикатор загрузки
+        exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Подготовка экспорта...';
+        exportBtn.disabled = true;
+        
+        // Показываем уведомление о применяемых фильтрах
+        const filterCount = document.querySelectorAll('.column-filter').length;
+        const activeFilters = Array.from(document.querySelectorAll('.column-filter'))
+            .filter(input => input.value.trim() !== '').length;
+        
+        if (activeFilters > 0) {
+            console.log(`📊 [EXPORT INFO] Применяется ${activeFilters} фильтр(ов) по столбцам`);
+        }
+        
+        // Получаем текущие параметры фильтрации
+        const searchQuery = document.querySelector('input[name="search"]').value;
+        const selectedColumns = Array.from(document.querySelectorAll('.column-checkbox-input:checked'))
+            .map(cb => cb.value);
+        
+        // Получаем все фильтры по столбцам
+        const columnFilters = {};
+        const filterInputs = document.querySelectorAll('.column-filter');
+        filterInputs.forEach(input => {
+            const columnContainer = input.closest('[data-column]');
+            if (!columnContainer) return; // Пропускаем, если контейнер не найден
+            
+            const columnName = columnContainer.getAttribute('data-column');
+            const value = input.value.trim();
+            if (value) {
+                columnFilters[columnName] = value;
+            }
+        });
+        
+        // Формируем URL для экспорта (используем существующий endpoint)
+        const exportUrl = new URL(`/export_filtered/{{ table_name }}`, window.location.origin);
+        
+        if (searchQuery) {
+            exportUrl.searchParams.set('search', searchQuery);
+        }
+        
+        if (selectedColumns.length > 0) {
+            exportUrl.searchParams.set('columns', selectedColumns.join(','));
+        }
+        
+        // Добавляем типы фильтров из URL (включая значения фильтров и их типы)
+        const currentUrlParams = new URLSearchParams(window.location.search);
+        for (const [key, value] of currentUrlParams.entries()) {
+            if ((key.startsWith('filter_type_') || key.startsWith('filter_')) && !key.startsWith('filter_type_filter_')) {
+                // Пропускаем 'special' значения для фильтров, они обрабатываются через тип
+                if (key.startsWith('filter_type_') || (value && value !== 'special')) {
+                    exportUrl.searchParams.set(key, value);
+                }
+            }
+        }
+        
+        console.log(`📊 [EXPORT INFO] URL экспорта: ${exportUrl.toString()}`);
+        
+        // Выполняем запрос на экспорт
+        const response = await fetch(exportUrl.toString(), {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Получаем blob с файлом
+        const blob = await response.blob();
+        
+        // Создаем ссылку для скачивания
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Формируем имя файла
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timestamp = `${day}.${month}.${year}_${hours}-${minutes}-${seconds}`;
+        const fileName = `{{ table_name }}_filtered_${timestamp}.xlsx`;
+        a.download = fileName;
+        
+        // Запускаем скачивание
+        document.body.appendChild(a);
+        a.click();
+        
+        // Очищаем ресурсы
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Показываем уведомление об успехе
+        showNotification(`✅ Экспорт завершен! Файл "${fileName}" скачан.`);
+        
+    } catch (error) {
+        console.error('Ошибка экспорта:', error);
+        showNotification(`❌ Ошибка экспорта: ${error.message}`);
+    } finally {
+        // Восстанавливаем кнопку
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+    }
+}
+
+// Удалена дублирующаяся устаревшая функция importFromExcel, мешавшая открытию диалога выбора файла
+
+// Функция для изменения количества записей на странице
+function changePerPage(newPerPage) {
+    const currentUrl = new URL(window.location);
+    currentUrl.searchParams.set('per_page', newPerPage);
+    currentUrl.searchParams.set('page', '1'); // Сбрасываем на первую страницу
+    window.location.href = currentUrl.toString();
+}
+
+// Функция для принудительного авторазмера (для отладки)
+function forceAutoResize() {
+    console.log('🔧 Принудительный авторазмер...');
+    if (typeof autoResizeColumns === 'function') {
+        autoResizeColumns();
+    } else {
+        console.log('❌ Функция autoResizeColumns не найдена');
+    }
+}
+
+// Функция для принудительного исправления столбцов с датами
+function fixDateColumns() {
+    console.log('📅 Принудительное исправление столбцов с датами...');
+    
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        console.log('❌ Таблица .data-table не найдена');
+        return;
+    }
+    
+    const dateColumns = ['Дата_контроля_ВИК', 'Дата_контроля_РК', 'Дата_заявки', 'Дата_сварки', 'Дата_Заключения_РК', 'Дата_АКТ_ВИК'];
+    
+    dateColumns.forEach(columnName => {
+        const headers = table.querySelectorAll(`th[data-column="${columnName}"]`);
+        const cells = table.querySelectorAll(`td[data-column="${columnName}"]`);
+        
+        if (headers.length > 0) {
+            console.log(`📅 Исправляем столбец "${columnName}"`);
+            
+            // Устанавливаем фиксированную ширину для заголовков
+            headers.forEach(header => {
+                header.style.setProperty('width', '150px', 'important');
+                header.style.setProperty('min-width', '150px', 'important');
+                header.style.setProperty('max-width', '150px', 'important');
+                header.style.setProperty('text-align', 'center', 'important');
+            });
+            
+            // Устанавливаем фиксированную ширину для ячеек
+            cells.forEach(cell => {
+                cell.style.setProperty('width', '150px', 'important');
+                cell.style.setProperty('min-width', '150px', 'important');
+                cell.style.setProperty('max-width', '150px', 'important');
+                cell.style.setProperty('text-align', 'center', 'important');
+                cell.style.setProperty('white-space', 'nowrap', 'important');
+            });
+        }
+    });
+}
+
+// Функция для инициализации перетаскивания столбцов
+function initColumnResizing() {
+    console.log('🔧 Инициализация перетаскивания столбцов...');
+    
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        console.log('❌ Таблица .data-table не найдена');
+        return;
+    }
+    
+    const headers = table.querySelectorAll('thead th');
+    let isResizing = false;
+    let currentResizer = null;
+    let startX = 0;
+    let startWidth = 0;
+    
+    // Создаем индикатор изменения размера
+    const resizeIndicator = document.createElement('div');
+    resizeIndicator.style.cssText = `
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #007bff;
+        z-index: 9999;
+        display: none;
+        pointer-events: none;
+    `;
+    document.body.appendChild(resizeIndicator);
+    
+    headers.forEach((header, index) => {
+        // Добавляем обработчик изменения размера к каждому заголовку
+        header.style.position = 'relative';
+        header.style.cursor = 'col-resize';
+        
+        header.addEventListener('mousedown', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') {
+                return; // Не перехватываем события для элементов управления
+            }
+            
+            isResizing = true;
+            currentResizer = this;
+            startX = e.clientX;
+            
+            const columnName = this.getAttribute('data-column');
+            const header = table.querySelector(`th[data-column="${columnName}"]`);
+            startWidth = header.offsetWidth;
+            
+            this.classList.add('active');
+            resizeIndicator.style.display = 'block';
+            resizeIndicator.style.left = e.clientX + 'px';
+            
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            
+            console.log(`🔧 Начало изменения размера столбца: ${columnName}, текущая ширина: ${startWidth}px`);
+        });
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing || !currentResizer) return;
+        
+        const deltaX = e.clientX - startX;
+        const newWidth = Math.max(50, startWidth + deltaX); // Минимум 50px
+        
+        resizeIndicator.style.left = e.clientX + 'px';
+        
+        const columnName = currentResizer.getAttribute('data-column');
+        const header = table.querySelector(`th[data-column="${columnName}"]`);
+        const cells = table.querySelectorAll(`td[data-column="${columnName}"]`);
+        
+        // Применяем новую ширину к заголовку
+        header.style.setProperty('width', newWidth + 'px', 'important');
+        header.style.setProperty('min-width', newWidth + 'px', 'important');
+        header.style.setProperty('max-width', newWidth + 'px', 'important');
+        
+        // Применяем новую ширину ко всем ячейкам столбца
+        cells.forEach(cell => {
+            cell.style.setProperty('width', newWidth + 'px', 'important');
+            cell.style.setProperty('min-width', newWidth + 'px', 'important');
+            cell.style.setProperty('max-width', newWidth + 'px', 'important');
+        });
+    });
+    
+    document.addEventListener('mouseup', function() {
+        if (!isResizing || !currentResizer) return;
+        
+        const columnName = currentResizer.getAttribute('data-column');
+        const header = table.querySelector(`th[data-column="${columnName}"]`);
+        const finalWidth = header.offsetWidth;
+        
+        currentResizer.classList.remove('active');
+        resizeIndicator.style.display = 'none';
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        
+        console.log(`🔧 Завершено изменение размера столбца: ${columnName}, финальная ширина: ${finalWidth}px`);
+        
+        isResizing = false;
+        currentResizer = null;
+    });
+}
+
+// Функция для анализа содержимого столбца
+function analyzeColumnContent(columnName, cellTexts) {
+    const analysis = {
+        maxLength: 0,
+        avgLength: 0,
+        hasLongText: false,
+        hasDates: false,
+        hasNumbers: false,
+        suggestedWidth: 200
+    };
+    
+    let totalLength = 0;
+    let longTextCount = 0;
+    let dateCount = 0;
+    let numberCount = 0;
+    
+    cellTexts.forEach(text => {
+        if (text && text.trim()) {
+            const length = text.length;
+            analysis.maxLength = Math.max(analysis.maxLength, length);
+            totalLength += length;
+            
+            if (length > 50) {
+                longTextCount++;
+            }
+            
+            // Проверяем на даты
+            if (/^\d{4}-\d{2}-\d{2}$/.test(text) || /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(text)) {
+                dateCount++;
+            }
+            
+            // Проверяем на числа
+            if (/^\d+$/.test(text) || /^\d+\.\d+$/.test(text)) {
+                numberCount++;
+            }
+        }
+    });
+    
+    analysis.avgLength = totalLength / cellTexts.length;
+    analysis.hasLongText = longTextCount > cellTexts.length * 0.3;
+    analysis.hasDates = dateCount > cellTexts.length * 0.5; // Если более 50% - даты
+    analysis.hasNumbers = numberCount > cellTexts.length * 0.5; // Если более 50% - числа
+    
+    // Определяем рекомендуемую ширину на основе анализа
+    if (analysis.hasDates) {
+        analysis.suggestedWidth = 150; // Даты обычно короткие
+    } else if (analysis.hasNumbers) {
+        analysis.suggestedWidth = 120; // Числа еще короче
+    } else if (analysis.maxLength > 100) {
+        analysis.suggestedWidth = 500;
+    } else if (analysis.maxLength > 50) {
+        analysis.suggestedWidth = 300;
+    } else if (analysis.maxLength > 20) {
+        analysis.suggestedWidth = 200;
+    } else {
+        analysis.suggestedWidth = 150;
+    }
+    
+    return analysis;
+}
+
+// Функция для анализа всех столбцов таблицы
+function analyzeAllColumns() {
+    console.log('📊 Анализ всех столбцов таблицы...');
+    
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        console.log('❌ Таблица .data-table не найдена');
+        return;
+    }
+    
+    const headers = table.querySelectorAll('thead th');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    if (headers.length === 0) {
+        console.log('❌ Заголовки таблицы не найдены');
+        return;
+    }
+    
+    const analysisResults = [];
+    
+    headers.forEach((header, columnIndex) => {
+        const columnName = header.getAttribute('data-column');
+        const cellTexts = [];
+        
+        // Собираем текст из всех ячеек столбца
+        rows.forEach(row => {
+            const cell = row.querySelector(`td[data-column="${columnName}"]`);
+            if (cell) {
+                cellTexts.push(cell.textContent || cell.innerText || '');
+            }
+        });
+        
+        if (cellTexts.length > 0) {
+            const analysis = analyzeColumnContent(columnName, cellTexts);
+            analysisResults.push({
+                columnName: columnName,
+                ...analysis
+            });
+            
+            console.log(`📊 Столбец "${columnName}": max=${analysis.maxLength}, avg=${analysis.avgLength.toFixed(1)}, suggested=${analysis.suggestedWidth}px`);
+        }
+    });
+    
+    return analysisResults;
+}
+
+// Функция для автоматического изменения размера столбцов
+function autoResizeColumns() {
+    console.log('🔧 Автоматическое изменение размера столбцов...');
+    
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        console.log('❌ Таблица .data-table не найдена');
+        return;
+    }
+    
+    const headers = table.querySelectorAll('thead th');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    console.log(`📊 Найдено заголовков: ${headers.length}, строк: ${rows.length}`);
+    
+    if (headers.length === 0) {
+        console.log('❌ Заголовки таблицы не найдены');
+        return;
+    }
+    
+    // Создаем временный элемент для измерения текста с точными стилями таблицы
+    const measureElement = document.createElement('span');
+    measureElement.style.cssText = `
+        position: absolute; 
+        visibility: hidden; 
+        white-space: nowrap; 
+        font-family: inherit; 
+        font-size: inherit; 
+        padding: 0.75rem; 
+        margin: 0; 
+        border: 1px solid #dee2e6;
+        box-sizing: border-box;
+        font-weight: inherit;
+        line-height: 1.4;
+    `;
+    document.body.appendChild(measureElement);
+    
+    // Копируем стили из таблицы для точного измерения
+    const tableStyles = window.getComputedStyle(table);
+    measureElement.style.fontFamily = tableStyles.fontFamily;
+    measureElement.style.fontSize = tableStyles.fontSize;
+    measureElement.style.fontWeight = tableStyles.fontWeight;
+    
+    headers.forEach((header, columnIndex) => {
+        const columnName = header.getAttribute('data-column');
+        let maxWidth = 0;
+        const cellTexts = [];
+        
+        console.log(`📏 Обработка столбца: ${columnName}`);
+        
+        // Измеряем ширину заголовка
+        const headerText = header.textContent.trim();
+        measureElement.textContent = headerText;
+        const headerWidth = measureElement.offsetWidth;
+        maxWidth = Math.max(maxWidth, headerWidth);
+        console.log(`  Заголовок "${headerText}": ${headerWidth}px`);
+        
+        // Измеряем ширину содержимого ячеек
+        rows.forEach((row, rowIndex) => {
+            const cell = row.querySelector(`td[data-column="${columnName}"]`);
+            if (cell) {
+                const cellText = cell.textContent || cell.innerText || '';
+                cellTexts.push(cellText);
+                
+                // Измеряем ширину текста
+                measureElement.textContent = cellText;
+                const cellWidth = measureElement.offsetWidth;
+                maxWidth = Math.max(maxWidth, cellWidth);
+                
+                // Показываем только первые несколько измерений для отладки
+                if (rowIndex < 3) {
+                    console.log(`  Ячейка ${rowIndex + 1}: "${cellText.substring(0, 30)}${cellText.length > 30 ? '...' : ''}" = ${cellWidth}px`);
+                }
+            }
+        });
+        
+        // Анализируем содержимое столбца
+        const analysis = analyzeColumnContent(columnName, cellTexts);
+        
+        // Определяем оптимальную ширину
+        let optimalWidth = Math.max(maxWidth, analysis.suggestedWidth);
+        const minWidth = 80; // Минимальная ширина
+        let maxAllowedWidth = 500; // Максимальная ширина по умолчанию
+        
+        // Специальные правила для определенных типов столбцов
+        if (columnName === 'id' || columnName === 'ID' || columnName.includes('id')) {
+            maxAllowedWidth = 100;
+        } else if (columnName === 'ISO' || columnName.includes('ISO') || columnName.includes('чертеж') || columnName.includes('Чертеж')) {
+            maxAllowedWidth = 600;
+        } else if (columnName === 'Дата_контроля_ВИК' || columnName === 'Дата_контроля_РК' || columnName === 'Дата_Заключения_РК' || columnName === 'Дата_АКТ_ВИК') {
+            maxAllowedWidth = 150;
+            optimalWidth = Math.max(optimalWidth, 120); // Минимум 120px для дат
+        } else if (columnName.includes('дата') || columnName.includes('Дата') || columnName.includes('date')) {
+            maxAllowedWidth = 200;
+        } else if (columnName.includes('номер') || columnName.includes('Номер') || columnName.includes('number')) {
+            maxAllowedWidth = 150;
+        } else if (columnName.includes('путь') || columnName.includes('Путь') || columnName.includes('path') || columnName.includes('full_path')) {
+            maxAllowedWidth = 500;
+        } else if (columnName.includes('описание') || columnName.includes('Описание') || 
+                   columnName.includes('примечания') || columnName.includes('Примечания') ||
+                   columnName.includes('заключение') || columnName.includes('Заключение') ||
+                   columnName.includes('результат') || columnName.includes('Результат')) {
+            maxAllowedWidth = 500;
+        } else if (columnName.includes('статус') || columnName.includes('Статус') || columnName.includes('status')) {
+            maxAllowedWidth = 150;
+        } else if (columnName.includes('титул') || columnName.includes('Титул') || columnName.includes('title')) {
+            maxAllowedWidth = 300;
+        } else if (columnName.includes('линия') || columnName.includes('Линия') || columnName.includes('line')) {
+            maxAllowedWidth = 150;
+        } else if (columnName.includes('стык') || columnName.includes('Стык') || columnName.includes('joint')) {
+            maxAllowedWidth = 150;
+        } else {
+            // Для неизвестных столбцов используем анализ содержимого
+            if (analysis.maxLength > 100) {
+                maxAllowedWidth = 500;
+            } else if (analysis.maxLength > 50) {
+                maxAllowedWidth = 300;
+            } else {
+                maxAllowedWidth = 200;
+            }
+        }
+        
+        // Применяем ограничения
+        optimalWidth = Math.max(optimalWidth, minWidth);
+        optimalWidth = Math.min(optimalWidth, maxAllowedWidth);
+        
+        console.log(`🔧 Столбец "${columnName}": измерено=${maxWidth}px, оптимально=${optimalWidth}px, максимум=${maxAllowedWidth}px`);
+        
+        // Применяем ширину к заголовку
+        header.style.setProperty('width', optimalWidth + 'px', 'important');
+        header.style.setProperty('min-width', optimalWidth + 'px', 'important');
+        header.style.setProperty('max-width', optimalWidth + 'px', 'important');
+        
+        // Специальная обработка для столбцов с датами
+        if (columnName.includes('Дата')) {
+            header.style.setProperty('text-align', 'center', 'important');
+        }
+        
+        // Применяем ширину ко всем ячейкам столбца
+        const cells = table.querySelectorAll(`td[data-column="${columnName}"]`);
+        cells.forEach(cell => {
+            cell.style.setProperty('width', optimalWidth + 'px', 'important');
+            cell.style.setProperty('min-width', optimalWidth + 'px', 'important');
+            cell.style.setProperty('max-width', optimalWidth + 'px', 'important');
+            
+            // Специальная обработка для столбцов с датами
+            if (columnName.includes('Дата')) {
+                cell.style.setProperty('text-align', 'center', 'important');
+                cell.style.setProperty('white-space', 'nowrap', 'important');
+            }
+        });
+    });
+    
+    // Удаляем временный элемент
+    document.body.removeChild(measureElement);
+    
+    console.log('✅ Автоматическое изменение размера столбцов завершено');
+}
+
+// Функции для фильтрации по столбцам (переменные уже объявлены выше на строке 1858-1859)
+
+function clearAllFilters() {
+    console.log('🧹 Очищаем все фильтры...');
+    
+    // Очищаем все поля фильтров
+    const filterInputs = document.querySelectorAll('.column-filter');
+    filterInputs.forEach(input => {
+        input.value = '';
+        input.disabled = false;
+        input.placeholder = 'Значение для поиска...';
+    });
+    
+    // Сбрасываем все селекторы типов фильтров
+    const filterSelects = document.querySelectorAll('.filter-type-select');
+    filterSelects.forEach(select => {
+        select.value = 'contains';
+    });
+    
+    // Скрываем все кнопки очистки
+    const clearBtns = document.querySelectorAll('.filter-clear-btn');
+    clearBtns.forEach(btn => {
+        btn.style.display = 'none';
+    });
+    
+    // Убираем активные стили
+    const filterContainers = document.querySelectorAll('.filter-container');
+    filterContainers.forEach(container => {
+        container.classList.remove('filter-active');
+    });
+    
+    // Очищаем объекты фильтров
+    columnFilters = {};
+    columnFilterTypes = {};
+    
+    // Переходим на страницу без фильтров
+    const url = new URL(window.location);
+    
+    // Удаляем все параметры фильтров
+    for (const key of url.searchParams.keys()) {
+        if (key.startsWith('filter_')) {
+            url.searchParams.delete(key);
+        }
+    }
+    
+    // Сбрасываем на первую страницу
+    url.searchParams.set('page', '1');
+    
+    console.log(`🔗 Переходим по URL без фильтров: ${url.toString()}`);
+    window.location.href = url.toString();
+}
+
+function initializeColumnFilters() {
+    console.log('🔧 Инициализация фильтров столбцов...');
+    
+    // Инициализируем фильтры из URL параметров
+    const url = new URL(window.location);
+    
+    // Восстанавливаем фокус на последнем активном поле фильтра
+    restoreFilterFocus();
+    
+    // Тестируем создание меню
+    console.log('🔧 Тестируем создание меню...');
+    const testMenus = document.querySelectorAll('.filter-type-menu');
+    console.log(`🔧 Найдено меню: ${testMenus.length}`);
+    testMenus.forEach((menu, index) => {
+        console.log(`🔧 Меню ${index}:`, menu.id, 'опций:', menu.querySelectorAll('.filter-type-option').length);
+    });
+    
+    // Добавляем глобальную функцию для тестирования
+    window.testFilterMenu = function(columnName) {
+        console.log(`🧪 Тестируем меню для столбца: ${columnName}`);
+        const menu = document.getElementById(`filter-menu-${columnName}`);
+        if (menu) {
+            menu.style.position = 'fixed';
+            menu.style.top = '100px';
+            menu.style.left = '100px';
+            menu.style.zIndex = '99999';
+            menu.style.display = 'block';
+            menu.style.backgroundColor = 'yellow';
+            menu.style.border = '3px solid red';
+            console.log(`🧪 Меню показано принудительно:`, menu);
+        } else {
+            console.error(`🧪 Меню не найдено: filter-menu-${columnName}`);
+        }
+    };
+    
+    // Создаем тестовое меню в центре экрана
+    window.createTestMenu = function() {
+        console.log(`🧪 Создаем тестовое меню в центре экрана`);
+        
+        // Удаляем старое тестовое меню если есть
+        const oldTestMenu = document.getElementById('test-filter-menu');
+        if (oldTestMenu) {
+            oldTestMenu.remove();
+        }
+        
+        // Создаем новое тестовое меню
+        const testMenu = document.createElement('div');
+        testMenu.id = 'test-filter-menu';
+        testMenu.innerHTML = `
+            <div style="padding: 10px; background: yellow; border: 3px solid red; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 999999; min-width: 200px;">
+                <div style="padding: 8px; cursor: pointer; background: white; margin: 2px; border: 1px solid #ccc;">🔍 Содержит</div>
+                <div style="padding: 8px; cursor: pointer; background: white; margin: 2px; border: 1px solid #ccc;">🔍➖ Не содержит</div>
+                <div style="padding: 8px; cursor: pointer; background: white; margin: 2px; border: 1px solid #ccc;">⬜ Пустые</div>
+                <div style="padding: 8px; cursor: pointer; background: white; margin: 2px; border: 1px solid #ccc;">☑️ Не пустые</div>
+            </div>
+        `;
+        document.body.appendChild(testMenu);
+        console.log(`🧪 Тестовое меню создано:`, testMenu);
+    };
+}
+
+function restoreFilterFocus() {
+    const lastFocusedFilter = sessionStorage.getItem('lastFocusedFilter');
+    if (lastFocusedFilter) {
+        console.log(`🔧 Восстанавливаем фокус для фильтра: ${lastFocusedFilter}`);
+        const filterInput = document.querySelector(`[data-column="${lastFocusedFilter}"] .column-filter`);
+        if (filterInput) {
+            setTimeout(() => {
+                filterInput.focus();
+                // Устанавливаем курсор в конец текста
+                const length = filterInput.value.length;
+                filterInput.setSelectionRange(length, length);
+                console.log(`🔧 Восстановлен фокус на фильтре: ${lastFocusedFilter}`);
+            }, 100);
+        }
+        // Очищаем сохраненный фокус
+        sessionStorage.removeItem('lastFocusedFilter');
+    }
+}
+
+function saveFilterFocus(columnName) {
+    sessionStorage.setItem('lastFocusedFilter', columnName);
+    console.log(`🔧 Сохранен фокус для фильтра: ${columnName}`);
+}
+
+// Инициализация системы выделения строк после загрузки страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Ждем немного, чтобы система выделения строк инициализировалась
+    setTimeout(() => {
+        if (typeof tableSelector !== 'undefined') {
+            console.log('🎯 Система выделения строк подключена к table_view.html');
+            
+            // Добавляем дополнительную инициализацию для этой страницы
+            const table = document.querySelector('.data-table');
+            if (table) {
+                tableSelector.initializeTable(table, 0);
+                console.log('✅ Таблица в table_view.html инициализирована для выделения строк');
+            }
+        }
+    }, 500);
+    
+    // Инициализация редактирования для condition_weld
+    if ('{{ table_name }}' === 'condition_weld') {
+        initializeConditionWeldEditing();
+    }
+    
+    // Подсвечиваем строки с заполненной датой ремонта для weld_repair_log
+    if ('{{ table_name }}' === 'weld_repair_log') {
+        if (typeof highlightRepairedRows === 'function') {
+            highlightRepairedRows();
+        } else {
+            setTimeout(() => {
+                try { typeof highlightRepairedRows === 'function' && highlightRepairedRows(); } catch(e) { console.warn('highlightRepairedRows not available yet'); }
+            }, 150);
+        }
+    }
+});
+
+// Функции для редактирования condition_weld
+// Флаг для предотвращения повторной инициализации
+let conditionWeldEditingInitialized = false;
+
+function initializeConditionWeldEditing() {
+    // Проверяем, не была ли уже выполнена инициализация
+    if (conditionWeldEditingInitialized) {
+        console.log('⚠️ Инициализация редактирования уже выполнена, пропускаем');
+        return;
+    }
+    
+    console.log('🔧 Инициализация редактирования condition_weld...');
+    
+    // Помечаем как инициализированную
+    conditionWeldEditingInitialized = true;
+    
+    // Подсвечиваем строки без даты сварки
+    highlightRowsWithoutWeldDate();
+    
+    // Добавляем обработчики двойного клика на ячейки
+    const table = document.querySelector('.data-table');
+    if (table) {
+        const cells = table.querySelectorAll('tbody td');
+        cells.forEach(cell => {
+            // Добавляем обработчик только один раз
+            if (!cell.hasAttribute('data-edit-handler')) {
+                cell.setAttribute('data-edit-handler', 'true');
+                cell.addEventListener('dblclick', function() {
+                    const column = this.getAttribute('data-column');
+                    const row = this.closest('tr');
+                    const recordId = row.getAttribute('data-record-id');
+                    
+                    if (recordId && isEditableColumn(column)) {
+                        openEditModal(recordId, column, this.textContent.trim());
+                    }
+                });
+            }
+        });
+    }
+}
+
+function highlightRowsWithoutWeldDate() {
+    console.log('🔍 Поиск строк без даты сварки...');
+    
+    const table = document.querySelector('.data-table');
+    if (!table) {
+        console.log('❌ Таблица не найдена');
+        return;
+    }
+    
+    const rows = table.querySelectorAll('tbody tr');
+    console.log(`📊 Найдено строк: ${rows.length}`);
+    
+    let highlightedCount = 0;
+    
+    rows.forEach((row, index) => {
+        // Ищем ячейку с датой сварки
+        const weldDateCell = row.querySelector('td[data-column="Дата_сварки"]');
+        
+        if (weldDateCell) {
+            const weldDate = weldDateCell.textContent.trim();
+            console.log(`Строка ${index + 1}: дата сварки = "${weldDate}"`);
+            
+            // Проверяем, есть ли дата сварки (не пустая и не NULL)
+            if (!weldDate || weldDate === 'NULL' || weldDate === '') {
+                row.classList.add('no-weld-date-row');
+                highlightedCount++;
+                console.log(`✅ Строка ${index + 1} подсвечена красным (нет даты сварки)`);
+            } else {
+                row.classList.remove('no-weld-date-row');
+            }
+        }
+    });
+    
+    console.log(`🎨 Подсвечено строк без даты сварки: ${highlightedCount}`);
+}
+
+function isEditableColumn(columnName) {
+    const editableColumns = ['стык', 'Код_удаления', 'Тип_шва'];
+    return editableColumns.includes(columnName);
+}
+
+function openEditModal(recordId, column, currentValue) {
+    console.log(`🔧 Открываем модальное окно для записи ${recordId}, столбец ${column}, значение "${currentValue}"`);
+    
+    // Загружаем данные записи
+    fetch(`/api/condition_weld/${recordId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showEditModal(data.record, column, currentValue);
+            } else {
+                alert('Ошибка загрузки данных записи: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки данных записи:', error);
+            alert('Ошибка загрузки данных записи: ' + error.message);
+        });
+}
+
+function showEditModal(record, column, currentValue) {
+    // Создаем модальное окно
+    const modalHtml = `
+        <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editModalLabel">
+                            <i class="fas fa-edit me-2"></i>Редактирование записи
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">ISO:</label>
+                                <input type="text" class="form-control" value="${record.ISO || ''}" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Стык:</label>
+                                <input type="text" class="form-control" id="editстык" value="${record.стык || ''}">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Код удаления:</label>
+                                <select class="form-select" id="editКод_удаления">
+                                    <option value="">Выберите код удаления</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Тип шва:</label>
+                                <select class="form-select" id="editТип_шва">
+                                    <option value="">Выберите тип шва</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Отмена
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="saveChanges(${record.id})">
+                            <i class="fas fa-save me-2"></i>Сохранить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Удаляем существующее модальное окно, если есть
+    const existingModal = document.getElementById('editModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Добавляем новое модальное окно
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Получаем ссылку на модальное окно
+    const modalElement = document.getElementById('editModal');
+    const modal = new bootstrap.Modal(modalElement);
+    
+    // Устанавливаем текущие значения сразу
+    const stykInput = document.getElementById('editстык');
+    if (stykInput) {
+        stykInput.value = record.стык || '';
+    }
+    
+    // Загружаем данные ДО показа модального окна
+    console.log('🔄 Начинаем загрузку данных для выпадающих списков...');
+    
+    // Загружаем данные синхронно ПЕРЕД показом окна
+    loadDeletionCodesForModal();
+    loadWeldTypesForModal();
+    
+    // Ждем немного и устанавливаем значения, затем показываем окно
+    setTimeout(() => {
+        const kodSelect = document.getElementById('editКод_удаления');
+        if (kodSelect) {
+            kodSelect.value = record.Код_удаления || '';
+            console.log('✅ Установлен код удаления:', record.Код_удаления);
+        }
+        
+        const typeSelect = document.getElementById('editТип_шва');
+        if (typeSelect) {
+            typeSelect.value = record.Тип_шва || '';
+            console.log('✅ Установлен тип шва:', record.Тип_шва);
+        }
+        
+        // Устанавливаем значение стыка
+        const stykInput = document.getElementById('editстык');
+        if (stykInput) {
+            stykInput.value = record.стык || '';
+        }
+        
+        console.log('✅ Все данные установлены, показываем модальное окно');
+        
+        // Показываем модальное окно
+        modal.show();
+    }, 300);
+}
+
+function saveChanges(recordId) {
+    console.log(`💾 Сохранение изменений для записи ID=${recordId}`);
+    
+    const formData = {
+        id: recordId,
+        стык: document.getElementById('editстык').value,
+        Код_удаления: document.getElementById('editКод_удаления').value,
+        Тип_шва: document.getElementById('editТип_шва').value
+    };
+    
+    console.log('💾 Данные для сохранения:', formData);
+    
+    // Отправляем данные на сервер
+    fetch('/api/update_condition_weld', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('📊 Ответ от сервера:', data);
+        if (data.success) {
+            showNotification('✅ Данные успешно обновлены. Пересоздание таблицы...', 'success');
+            
+            // Закрываем модальное окно
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+            modal.hide();
+            
+            // Запускаем пересоздание таблицы condition_weld
+            return fetch('/api/recreate_condition_weld_table', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+        } else {
+            console.error('❌ Ошибка обновления:', data);
+            showNotification('❌ Ошибка обновления: ' + (data.error || data.message || 'Неизвестная ошибка'), 'error');
+            throw new Error('Ошибка обновления данных');
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('📊 Ответ пересоздания таблицы:', data);
+        if (data.success) {
+            showNotification('✅ Таблица condition_weld пересоздана. Обновление страницы...', 'success');
+            
+            // Перезагружаем страницу для отображения обновленных данных
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            showNotification('⚠️ Данные обновлены, но ошибка пересоздания таблицы: ' + data.error, 'warning');
+            
+            // Все равно перезагружаем страницу
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка сохранения:', error);
+        showNotification('❌ Ошибка сохранения: ' + error.message, 'error');
+    });
+}
+
+// Функция загрузки кодов удаления для модального окна
+function loadDeletionCodesForModal() {
+    fetch('/api/get_deletion_codes')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Ошибка загрузки кодов удаления:', data.error);
+                return;
+            }
+            
+            const select = document.getElementById('editКод_удаления');
+            if (select && data.deletion_codes) {
+                // Очищаем существующие опции (кроме первой)
+                select.innerHTML = '<option value="">Выберите код удаления</option>';
+                
+                // Добавляем новые опции
+                data.deletion_codes.forEach(code => {
+                    const option = document.createElement('option');
+                    option.value = code.value;
+                    // Отображаем код и описание в формате "Код - Описание"
+                    let displayText = code.value;
+                    if (code.description && code.description !== code.value) {
+                        displayText = `${code.value} - ${code.description}`;
+                    }
+                    option.textContent = displayText;
+                    // Добавляем title для отображения полной информации при наведении
+                    if (code.rasshifrovka || code.primen_prim) {
+                        let tooltip = `Код: ${code.value}`;
+                        if (code.primen_prim) tooltip += `\nПример применения: ${code.primen_prim}`;
+                        if (code.rasshifrovka) tooltip += `\nРасшифровка: ${code.rasshifrovka}`;
+                        option.title = tooltip;
+                    }
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки кодов удаления:', error);
+        });
+}
+
+// Функция загрузки типов швов для модального окна
+function loadWeldTypesForModal() {
+    fetch('/api/get_weld_types')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Ошибка загрузки типов швов:', data.error);
+                return;
+            }
+            
+            const select = document.getElementById('editТип_шва');
+            if (select && data.weld_types) {
+                // Очищаем существующие опции (кроме первой)
+                select.innerHTML = '<option value="">Выберите тип шва</option>';
+                
+                // Добавляем новые опции
+                data.weld_types.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.value;
+                    option.textContent = type.description || type.value;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки типов швов:', error);
+        });
+}
+
+// Функции для работы с выбранными записями
+
+function toggleRecordSelection(recordId) {
+    console.log('🎯 Переключение выбора записи:', recordId);
+    
+    if (selectedRecords.has(recordId)) {
+        selectedRecords.delete(recordId);
+        console.log('❌ Запись удалена из выбора:', recordId);
+    } else {
+        selectedRecords.add(recordId);
+        console.log('✅ Запись добавлена в выбор:', recordId);
+    }
+    
+    updateRecordSelectionCount();
+}
+
+function toggleAllRecords() {
+    console.log('🎯 Переключение выбора всех записей');
+    
+    const checkboxes = document.querySelectorAll('.record-checkbox');
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    
+    if (selectAllCheckbox.checked) {
+        // Выбираем все записи
+        checkboxes.forEach(checkbox => {
+            const recordId = checkbox.value;
+            if (recordId) {
+                selectedRecords.add(recordId);
+            }
+        });
+        console.log('✅ Все записи выбраны');
+    } else {
+        // Снимаем выбор со всех записей
+        let removedCount = 0;
+        checkboxes.forEach(checkbox => {
+            const value = checkbox.value;
+            if (value) {
+                selectedRecords.delete(value);
+                removedCount++;
+            }
+        });
+        console.log('Удалено записей из выбора:', removedCount);
+    }
+    updateRecordSelectionCount();
+}
+
+// Функция для переноса выбранных записей в журнал ремонтов
+async function transferSelectedToWeldRepairLog() {
+    console.log('🔄 Перенос выбранных записей в журнал ремонтов...');
+    console.log('Выбранные записи:', Array.from(selectedRecords));
+    
+    if (selectedRecords.size === 0) {
+        alert('Выберите записи для переноса');
+        return;
+    }
+    
+    const selectedData = [];
+    const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+    
+    checkboxes.forEach(checkbox => {
+        const recordId = checkbox.value;
+        const row = checkbox.closest('tr');
+        const cells = row.querySelectorAll('td');
+        
+        // Собираем данные из строки таблицы
+        const recordData = {
+            app_row_id: recordId
+        };
+        
+        // Добавляем данные из ячеек (пропускаем первую ячейку с чекбоксом)
+        for (let i = 1; i < cells.length; i++) {
+            const cell = cells[i];
+            const columnIndex = i - 1; // Индекс столбца (без учета чекбокса)
+            const columnName = document.querySelector(`th:nth-child(${i + 1})`).textContent.trim();
+            
+            // Получаем текст из ячейки, убирая HTML теги
+            const cellText = cell.textContent || cell.innerText || '';
+            recordData[columnName] = cellText.trim();
+        }
+        
+        selectedData.push(recordData);
+    });
+    
+    // Отправляем запрос на сервер
+    const response = await fetch('/api/transfer_to_weld_repair_log', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            records: selectedData
+        })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+        alert(`Успешно перенесено ${result.transferred_count} записей в журнал ремонтов`);
+        
+        // Снимаем выделение с чекбоксов
+        selectedRecords.clear();
+        document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('select-all-checkbox').checked = false;
+        updateRecordSelectionCount();
+        
+        // Перезагружаем страницу для обновления данных
+        window.location.reload();
+    } else {
+        alert('Ошибка переноса: ' + result.error);
+    }
+}
+
+// Функция для удаления выбранных записей из pipeline
+async function deleteSelectedFromPipeline() {
+    console.log('🗑️ Удаление выбранных записей из pipeline...');
+    console.log('Выбранные записи:', Array.from(selectedRecords));
+    
+    if (selectedRecords.size === 0) {
+        alert('Выберите записи для удаления');
+        return;
+    }
+    
+    if (!confirm(`Вы уверены, что хотите удалить ${selectedRecords.size} записей из pipeline?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/delete_from_pipeline', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                record_ids: Array.from(selectedRecords)
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`Успешно удалено ${result.deleted_count} записей из pipeline`);
+            
+            // Снимаем выделение с чекбоксов
+            selectedRecords.clear();
+            document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('select-all-checkbox').checked = false;
+            updateRecordSelectionCount();
+            
+            // Перезагружаем страницу для обновления данных
+            window.location.reload();
+        } else {
+            alert('Ошибка удаления: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Ошибка удаления:', error);
+        alert('Ошибка удаления: ' + e.message);
+    }
+}
+
+// Функция для редактирования выбранной записи (дубликат удален, используется версия выше)
+
+// Функция для открытия модального окна редактирования записи (дубликат удален, используется версия выше)
+
+// Функция для сохранения изменений в журнале ремонтов (дубликат удален, используется версия выше)
+
+// Функция для редактирования записи в слов_клейм_факт
+function editSlovKleimoFactRecord(recordId) {
+    console.log('Редактирование записи слов_клейм_факт:', recordId);
+    
+    // Загружаем данные записи
+    fetch(`/api/slov_kleimo_fact/${recordId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSlovKleimoFactEditModal(data.record);
+            } else {
+                alert('Ошибка загрузки данных записи: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки данных записи:', error);
+            alert('Ошибка загрузки данных записи: ' + error.message);
+        });
+}
+
+
+</script>
+
+<!-- Модуль для управления ФИО -->
+<script src="{{ url_for('static', filename='js/fio_manager.js') }}"></script>
+
+<script>
+// Переопределяем функции из base.js для table_view.html (после загрузки base.js)
+// Эти функции должны загружаться ПОСЛЕ base.js, чтобы иметь приоритет
+window.applyColumnSelection = function() {
+    console.log('🔧 applyColumnSelection из table_view.html вызвана');
+    
+    const checkedColumns = Array.from(document.querySelectorAll('.column-checkbox-input:checked'))
+        .map(cb => cb.value);
+    
+    console.log('🔧 Найдено выбранных столбцов:', checkedColumns.length);
+    console.log('🔧 Выбранные столбцы:', checkedColumns);
+    
+    const currentUrl = new URL(window.location);
+    
+    // Если не выбрано ни одного столбца, передаем пустую строку
+    if (checkedColumns.length === 0) {
+        currentUrl.searchParams.set('columns', '');
+    } else {
+        currentUrl.searchParams.set('columns', checkedColumns.join(','));
+    }
+    
+    currentUrl.searchParams.set('page', '1'); // Сбрасываем на первую страницу
+    
+    console.log('🔧 Переходим на URL:', currentUrl.toString());
+    window.location.href = currentUrl.toString();
+};
+
+window.selectAllColumns = function() {
+    console.log('🔧 selectAllColumns из table_view.html вызвана');
+    document.querySelectorAll('.column-checkbox-input').forEach(cb => {
+        cb.checked = true;
+    });
+    console.log('🔧 Все столбцы выбраны');
+};
+
+window.deselectAllColumns = function() {
+    console.log('🔧 deselectAllColumns из table_view.html вызвана');
+    document.querySelectorAll('.column-checkbox-input').forEach(cb => {
+        cb.checked = false;
+    });
+    console.log('🔧 Все столбцы сняты');
+};
+
+window.selectDefaultColumns = function() {
+    console.log('🔧 selectDefaultColumns из table_view.html вызвана');
+    // Показываем все столбцы по умолчанию
+    document.querySelectorAll('.column-checkbox-input').forEach(cb => {
+        cb.checked = true;
+    });
+    console.log('🔧 Столбцы по умолчанию выбраны');
+};
+
+console.log('🔧 Функции table_view.html загружены:', {
+    applyColumnSelection: typeof window.applyColumnSelection,
+    selectAllColumns: typeof window.selectAllColumns,
+    deselectAllColumns: typeof window.deselectAllColumns,
+    selectDefaultColumns: typeof window.selectDefaultColumns
+});
+</script>
+
+{% endblock %}

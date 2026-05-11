@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Дубликаты - M_Kran Web Interface{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">
+                    <i class="fas fa-copy me-2"></i>
+                    Управление дубликатами
+                </h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">
+                    Просмотр и управление таблицами дубликатов сварных швов
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>
+                    Таблицы дубликатов
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if tables %}
+                    <div class="row">
+                        {% for table in tables %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-copy me-2 text-warning"></i>
+                                        {{ table }}
+                                    </h6>
+                                    <p class="card-text text-muted">
+                                        {% if 'wl_report_smr' in table %}
+                                            Дубликаты отчетов от мастеров (SMR)
+                                        {% elif 'wl_china' in table %}
+                                            Дубликаты WELDLOG китайский
+                                        {% else %}
+                                            Таблица дубликатов
+                                        {% endif %}
+                                    </p>
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="{{ url_for('view_duplicates', table_name=table) }}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i>Просмотр
+                                        </a>
+                                        <a href="{{ url_for('export_table', table_name=table) }}" 
+                                           class="btn btn-outline-success btn-sm">
+                                            <i class="fas fa-download me-1"></i>Экспорт
+                                        </a>
+                                        <button class="btn btn-outline-info btn-sm" 
+                                                onclick="getTableInfo('{{ table }}')">
+                                            <i class="fas fa-info-circle me-1"></i>Инфо
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Таблицы дубликатов не найдены. Возможно, скрипты извлечения дубликатов еще не были запущены.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Информация о дубликатах -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    О дубликатах
+                </h6>
+            </div>
+            <div class="card-body">
+                <p>В системе обрабатываются следующие типы дубликатов:</p>
+                <ul>
+                    <li><strong>duplicates_wl_report_smr</strong> - Дубликаты отчетов от мастеров</li>
+                    <li><strong>duplicates_wl_china</strong> - Дубликаты WELDLOG китайский</li>
+                </ul>
+                <p class="text-muted">
+                    Для извлечения дубликатов используйте соответствующие скрипты в разделе "ETL Процессы".
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>
+                    Действия
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('scripts') }}" class="btn btn-primary">
+                        <i class="fas fa-code me-1"></i>Запустить скрипты извлечения
+                    </a>
+                    <a href="{{ url_for('database') }}" class="btn btn-secondary">
+                        <i class="fas fa-database me-1"></i>Просмотр всех таблиц
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно с информацией о таблице -->
+<div class="modal fade" id="tableInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Информация о таблице дубликатов
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="tableInfoContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getTableInfo(tableName) {
+    showLoading();
+    
+    fetch(`/api/table_info/${tableName}`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            
+            if (data.error) {
+                document.getElementById('tableInfoContent').innerHTML = 
+                    `<div class="alert alert-danger">${data.error}</div>`;
+            } else {
+                let columnsHtml = '';
+                data.columns.forEach(col => {
+                    columnsHtml += `
+                        <tr>
+                            <td><code>${col.name}</code></td>
+                            <td><span class="badge bg-secondary">${col.type}</span></td>
+                        </tr>
+                    `;
+                });
+                
+                document.getElementById('tableInfoContent').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Основная информация</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Название:</strong> ${data.table_name}</li>
+                                <li><strong>Дубликатов:</strong> ${data.total_records.toLocaleString()}</li>
+                                <li><strong>Столбцов:</strong> ${data.columns.length}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Действия</h6>
+                            <div class="d-grid gap-2">
+                                <a href="/duplicates/${data.table_name}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye me-1"></i>Просмотр дубликатов
+                                </a>
+                                <a href="/export/${data.table_name}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-download me-1"></i>Экспорт в Excel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Структура таблицы</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Столбец</th>
+                                    <th>Тип</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${columnsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            new bootstrap.Modal(document.getElementById('tableInfoModal')).show();
+        })
+        .catch(error => {
+            hideLoading();
+            document.getElementById('tableInfoContent').innerHTML = 
+                `<div class="alert alert-danger">Ошибка загрузки информации: ${error}</div>`;
+            new bootstrap.Modal(document.getElementById('tableInfoModal')).show();
+        });
+}
+</script>
+{% endblock %} 

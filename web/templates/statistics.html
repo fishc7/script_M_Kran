@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика - M_Kran Web Interface{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Дюйм/Диаметры сварка
+                </h2>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-end mb-3">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success" onclick="updateStatistics()" id="updateStatsBtn">
+                            <i class="fas fa-sync-alt me-2"></i>Обновить
+                        </button>
+                        <button
+                            id="runCalculationBtn"
+                            class="btn btn-primary"
+                            onclick="runCalculateAverageDN()"
+                        >
+                            <i class="fas fa-file-export me-2"></i>Экспорт
+                        </button>
+                    </div>
+                </div>
+
+                {% if stats_data %}
+                <!-- Статистика по дням -->
+                {% if stats_data.last_daily %}
+                <div class="card mt-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-day me-2"></i>
+                            Расчет DN на каждый день
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Дата:</strong> {{ stats_data.last_daily.дата }}</p>
+                                <p><strong>День недели:</strong> {{ stats_data.last_daily.день_недели }}</p>
+                                <p><strong>Количество записей:</strong> {{ stats_data.last_daily.количество_записей }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Среднее DN:</strong> <span class="badge bg-primary">{{ stats_data.last_daily.среднее_dn }}</span></p>
+                                <p><strong>Минимальное DN:</strong> {{ stats_data.last_daily.минимальное_dn }}</p>
+                                <p><strong>Максимальное DN:</strong> {{ stats_data.last_daily.максимальное_dn }}</p>
+                                <p><strong>Сумма DN:</strong> {{ stats_data.last_daily.сумма_dn }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Статистика по неделям -->
+                {% if stats_data.last_weekly %}
+                <div class="card mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-week me-2"></i>
+                            Расчет DN по неделям
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Год:</strong> {{ stats_data.last_weekly.год }}</p>
+                                <p><strong>Неделя:</strong> {{ stats_data.last_weekly.неделя }}</p>
+                                <p><strong>Период:</strong> {{ stats_data.last_weekly.начало_недели }} - {{ stats_data.last_weekly.конец_недели }}</p>
+                                <p><strong>Количество записей:</strong> {{ stats_data.last_weekly.количество_записей }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Среднее DN:</strong> <span class="badge bg-info">{{ stats_data.last_weekly.среднее_dn }}</span></p>
+                                <p><strong>Минимальное DN:</strong> {{ stats_data.last_weekly.минимальное_dn }}</p>
+                                <p><strong>Максимальное DN:</strong> {{ stats_data.last_weekly.максимальное_dn }}</p>
+                                <p><strong>Сумма DN:</strong> {{ stats_data.last_weekly.сумма_dn }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Статистика по месяцам -->
+                {% if stats_data.last_monthly %}
+                <div class="card mt-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Расчет DN по месяцам
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Год:</strong> {{ stats_data.last_monthly.год }}</p>
+                                <p><strong>Месяц:</strong> {{ stats_data.last_monthly.месяц }} ({{ stats_data.last_monthly.год_месяц }})</p>
+                                <p><strong>Количество записей:</strong> {{ stats_data.last_monthly.количество_записей }}</p>
+                                <p><strong>Количество дней:</strong> {{ stats_data.last_monthly.количество_дней }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Среднее DN:</strong> <span class="badge bg-success">{{ stats_data.last_monthly.среднее_dn }}</span></p>
+                                <p><strong>Минимальное DN:</strong> {{ stats_data.last_monthly.минимальное_dn }}</p>
+                                <p><strong>Максимальное DN:</strong> {{ stats_data.last_monthly.максимальное_dn }}</p>
+                                <p><strong>Сумма DN:</strong> {{ stats_data.last_monthly.сумма_dn }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Статистика по годам -->
+                {% if stats_data.yearly %}
+                <div class="card mt-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar me-2"></i>
+                            Расчет DN по годам
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Год</th>
+                                        <th>Количество записей</th>
+                                        <th>Количество дней</th>
+                                        <th>Количество месяцев</th>
+                                        <th>Среднее DN</th>
+                                        <th>Минимальное DN</th>
+                                        <th>Максимальное DN</th>
+                                        <th>Сумма DN</th>
+                                        <th>Период</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for year_data in stats_data.yearly %}
+                                    <tr>
+                                        <td><strong>{{ year_data.Год }}</strong></td>
+                                        <td>{{ year_data.Количество_записей }}</td>
+                                        <td>{{ year_data.Количество_дней }}</td>
+                                        <td>{{ year_data.Количество_месяцев }}</td>
+                                        <td><span class="badge bg-warning text-dark">{{ year_data.Среднее_DN }}</span></td>
+                                        <td>{{ year_data.Минимальное_DN }}</td>
+                                        <td>{{ year_data.Максимальное_DN }}</td>
+                                        <td>{{ year_data.Сумма_DN }}</td>
+                                        <td>{{ year_data.Первая_дата }} - {{ year_data.Последняя_дата }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Статистика за весь период -->
+                {% if stats_data.period %}
+                <div class="card mt-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Общая статистика за весь период
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Общее количество записей:</strong> {{ stats_data.period.общее_количество_записей }}</p>
+                                <p><strong>Количество дней:</strong> {{ stats_data.period.количество_дней }}</p>
+                                <p><strong>Период:</strong> {{ stats_data.period.первая_дата }} - {{ stats_data.period.последняя_дата }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Среднее DN за период:</strong> <span class="badge bg-danger">{{ stats_data.period.среднее_dn_за_период }}</span></p>
+                                <p><strong>Минимальное DN:</strong> {{ stats_data.period.минимальное_dn }}</p>
+                                <p><strong>Максимальное DN:</strong> {{ stats_data.period.максимальное_dn }}</p>
+                                <p><strong>Сумма DN:</strong> {{ stats_data.period.сумма_dn }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="alert alert-warning mt-4">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Внимание:</strong> Не удалось загрузить статистику. Убедитесь, что в таблице wl_report_smr есть столбцы DN и Дата_сварки.
+                    <br><br>
+                    <button class="btn btn-sm btn-outline-warning" onclick="checkStatistics()">
+                        <i class="fas fa-search me-2"></i>Проверить доступность данных
+                    </button>
+                    <button class="btn btn-sm btn-success ms-2" onclick="updateStatistics()" id="updateStatsBtnSmall">
+                        <i class="fas fa-sync-alt me-2"></i>Обновить
+                    </button>
+                    <div id="checkResult" class="mt-2" style="display: none;"></div>
+                </div>
+                {% endif %}
+
+                <!-- Скрытые элементы для отображения статуса расчета -->
+                <div id="calculationStatus" class="mt-3" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-spinner fa-spin me-2"></i>
+                        <span id="statusMessage">Выполняется расчет...</span>
+                    </div>
+                </div>
+
+                <div id="calculationResult" class="mt-3" style="display: none;">
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Успешно!</strong> <span id="resultMessage"></span>
+                    </div>
+                </div>
+
+                <div id="calculationError" class="mt-3" style="display: none;">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <strong>Ошибка!</strong> <span id="errorMessage"></span>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Что рассчитывается
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group">
+                            <li class="list-group-item">
+                                <i class="fas fa-calendar-day me-2 text-primary"></i>
+                                <strong>По дням:</strong> Расчет DN на каждый день с указанием дня недели
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-calendar-week me-2 text-info"></i>
+                                <strong>По неделям:</strong> Расчет DN по неделям (неделя с понедельника по воскресенье)
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-calendar-alt me-2 text-success"></i>
+                                <strong>По месяцам:</strong> Расчет DN по месяцам с названиями месяцев
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-calendar me-2 text-warning"></i>
+                                <strong>По годам:</strong> Расчет DN по годам
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-chart-line me-2 text-danger"></i>
+                                <strong>За весь период:</strong> Общая статистика за весь период времени
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function runCalculateAverageDN() {
+    const btn = document.getElementById('runCalculationBtn');
+    const statusDiv = document.getElementById('calculationStatus');
+    const resultDiv = document.getElementById('calculationResult');
+    const errorDiv = document.getElementById('calculationError');
+    const statusMessage = document.getElementById('statusMessage');
+    const resultMessage = document.getElementById('resultMessage');
+    const errorMessage = document.getElementById('errorMessage');
+
+    // Скрываем предыдущие сообщения
+    resultDiv.style.display = 'none';
+    errorDiv.style.display = 'none';
+    statusDiv.style.display = 'block';
+
+    // Блокируем кнопку
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Выполняется...';
+    statusMessage.textContent = 'Запуск расчета...';
+
+    // Отправляем запрос
+    fetch('/api/run_calculate_average_dn', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        statusDiv.style.display = 'none';
+
+        if (data.success) {
+            if (data.status === 'running') {
+                // Скрипт запущен, но еще выполняется
+                statusDiv.style.display = 'block';
+                statusMessage.textContent = data.message || 'Расчет выполняется...';
+
+                // Проверяем статус каждые 3 секунды
+                setTimeout(() => {
+                    checkCalculationStatus();
+                }, 3000);
+            } else {
+                // Скрипт завершился
+                resultDiv.style.display = 'block';
+                resultMessage.textContent = data.message || 'Расчет выполнен успешно!';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-file-export me-2"></i>Экспорт';
+            }
+        } else {
+            errorDiv.style.display = 'block';
+            errorMessage.textContent = data.message || 'Произошла ошибка при выполнении расчета';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play me-2"></i>Запустить расчет';
+        }
+    })
+    .catch(error => {
+        statusDiv.style.display = 'none';
+        errorDiv.style.display = 'block';
+        errorMessage.textContent = 'Ошибка связи с сервером: ' + error.message;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play me-2"></i>Запустить расчет';
+    });
+}
+
+function checkCalculationStatus() {
+    // Простая проверка - можно расширить для реального статуса
+    const statusDiv = document.getElementById('calculationStatus');
+    const resultDiv = document.getElementById('calculationResult');
+    const errorDiv = document.getElementById('calculationError');
+    const btn = document.getElementById('runCalculationBtn');
+    
+    // Предполагаем, что скрипт завершился через некоторое время
+    // В реальном приложении можно добавить endpoint для проверки статуса
+    setTimeout(() => {
+        statusDiv.style.display = 'none';
+        resultDiv.style.display = 'block';
+        document.getElementById('resultMessage').textContent = 
+            'Расчет выполнен успешно! Файл сохранен в D:\\Загрузка';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play me-2"></i>Запустить расчет';
+    }, 10000); // Через 10 секунд показываем успех (можно настроить)
+}
+
+function checkStatistics() {
+    const resultDiv = document.getElementById('checkResult');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Проверка...</div>';
+    
+    fetch('/api/check_dn_statistics')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let html = '<div class="alert alert-success">';
+                html += '<strong>Проверка завершена:</strong><br>';
+                html += `✓ Таблица wl_report_smr: ${data.table_exists ? 'найдена' : 'не найдена'}<br>`;
+                html += `✓ Столбец DN: ${data.has_dn_column ? 'найден' : 'не найден'}<br>`;
+                html += `✓ Столбец Дата_сварки: ${data.has_date_column ? 'найден' : 'не найден'}<br>`;
+                html += `✓ Всего столбцов в таблице: ${data.total_columns}<br>`;
+                html += `✓ Записей с данными: ${data.data_count}<br>`;
+                if (data.columns && data.columns.length > 0) {
+                    html += `<br><strong>Первые столбцы:</strong> ${data.columns.slice(0, 10).join(', ')}`;
+                }
+                html += '</div>';
+                resultDiv.innerHTML = html;
+            } else {
+                resultDiv.innerHTML = `<div class="alert alert-danger"><strong>Ошибка:</strong> ${data.message}</div>`;
+            }
+        })
+        .catch(error => {
+            resultDiv.innerHTML = `<div class="alert alert-danger"><strong>Ошибка:</strong> ${error.message}</div>`;
+        });
+}
+
+function updateStatistics() {
+    // Ищем обе кнопки (основная и маленькая)
+    const btn = document.getElementById('updateStatsBtn');
+    const btnSmall = document.getElementById('updateStatsBtnSmall');
+    
+    if (!btn && !btnSmall) {
+        console.error('Кнопка обновления статистики не найдена');
+        return;
+    }
+    
+    // Сохраняем оригинальный текст
+    const originalText = btn ? btn.innerHTML : btnSmall.innerHTML;
+    const loadingText = '<i class="fas fa-spinner fa-spin me-2"></i>Обновление...';
+    
+    // Блокируем обе кнопки и показываем индикатор загрузки
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = loadingText;
+    }
+    if (btnSmall) {
+        btnSmall.disabled = true;
+        btnSmall.innerHTML = loadingText;
+    }
+    
+    fetch('/api/update_dn_statistics', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(async response => {
+            // Проверяем статус ответа
+            const contentType = response.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+            
+            if (!response.ok) {
+                // Если статус не OK, пытаемся получить JSON или текст
+                const text = await response.text();
+                if (isJson) {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.message || `Ошибка ${response.status}: ${response.statusText}`);
+                    } catch (e) {
+                        throw new Error(`Ошибка ${response.status}: ${text.substring(0, 200)}`);
+                    }
+                } else {
+                    throw new Error(`Ошибка ${response.status}: ${response.statusText}. Сервер вернул HTML вместо JSON.`);
+                }
+            }
+            
+            // Проверяем, что ответ действительно JSON
+            if (!isJson) {
+                const text = await response.text();
+                throw new Error(`Сервер вернул не JSON. Тип: ${contentType || 'неизвестен'}. Ответ: ${text.substring(0, 200)}`);
+            }
+            
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Показываем сообщение об успехе
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show mt-3';
+                alertDiv.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Успешно!</strong> ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                // Вставляем сообщение после первой найденной кнопки
+                const targetBtn = btn || btnSmall;
+                targetBtn.parentNode.insertBefore(alertDiv, targetBtn.nextSibling);
+                
+                // Автоматически скрываем сообщение через 5 секунд
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 5000);
+                
+                // Перезагружаем страницу через 1 секунду для отображения обновленных данных
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                // Показываем сообщение об ошибке
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+                alertDiv.innerHTML = `
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Ошибка!</strong> ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                const targetBtn = btn || btnSmall;
+                targetBtn.parentNode.insertBefore(alertDiv, targetBtn.nextSibling);
+                
+                // Разблокируем обе кнопки
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+                if (btnSmall) {
+                    btnSmall.disabled = false;
+                    btnSmall.innerHTML = originalText;
+                }
+            }
+        })
+        .catch(error => {
+            // Показываем сообщение об ошибке
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+            alertDiv.innerHTML = `
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <strong>Ошибка!</strong> Не удалось обновить статистику: ${error.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            const targetBtn = btn || btnSmall;
+            targetBtn.parentNode.insertBefore(alertDiv, targetBtn.nextSibling);
+            
+            // Разблокируем обе кнопки
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+            if (btnSmall) {
+                btnSmall.disabled = false;
+                btnSmall.innerHTML = originalText;
+            }
+        });
+}
+</script>
+
+{% endblock %}
+

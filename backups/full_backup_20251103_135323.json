@@ -1,0 +1,29 @@
+{
+  "backup_type": "full",
+  "created_at": "2025-11-03T13:53:24.295170",
+  "project_root": "D:\\МК_Кран\\script_M_Kran",
+  "backup_size": 16869152,
+  "files_count": 275,
+  "excluded_patterns": [
+    "__pycache__",
+    "*.pyc",
+    "*.pyo",
+    "*.pyd",
+    ".git",
+    ".gitignore",
+    "venv",
+    "env",
+    "node_modules",
+    "*.log",
+    "*.tmp",
+    "*.temp",
+    "backups",
+    "build",
+    "dist",
+    ".pytest_cache",
+    ".coverage",
+    "*.egg-info",
+    ".DS_Store",
+    "Thumbs.db"
+  ]
+}

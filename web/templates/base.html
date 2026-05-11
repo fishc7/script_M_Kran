@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}M_Kran Web Interface{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome CSS - CDN как резервный вариант -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Локальный Font Awesome (если есть) -->
+    <link href="{{ url_for('static', filename='css/all.min.css') }}" rel="stylesheet">
+    <!-- Стили для фильтрации таблиц -->
+    <link href="{{ url_for('static', filename='css/table_filter.css') }}" rel="stylesheet">
+    <!-- Улучшения для таблиц -->
+    <link href="{{ url_for('static', filename='css/table_improvements.css') }}" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <!-- JavaScript для выделения строк в таблицах -->
+    <script src="{{ url_for('static', filename='js/table_selection.js') }}"></script>
+    <style>
+        /* Боковая панель */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 250px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            z-index: 1000;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+        
+        /* Состояние свернутой панели */
+        .sidebar.collapsed {
+            width: 50px;
+        }
+        
+        /* Скрываем только текст, но не иконки */
+        .sidebar.collapsed .sidebar-header h5,
+        .sidebar.collapsed .sidebar-header small,
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .backup-btn span {
+            display: none !important;
+        }
+        
+        /* Показываем иконки в свернутой панели */
+        .sidebar.collapsed .nav-link i {
+            margin-right: 0 !important;
+            font-size: 1.2rem !important;
+            color: white !important;
+            display: block !important;
+            width: auto !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .sidebar.collapsed .backup-btn i {
+            margin-right: 0;
+            font-size: 1rem;
+        }
+        
+        .sidebar.collapsed .nav-link {
+            justify-content: center !important;
+            padding: 0.75rem !important;
+            min-height: 50px !important;
+            align-items: center !important;
+            text-align: center !important;
+            display: flex !important;
+        }
+        
+        .sidebar.collapsed .nav-link i {
+            margin-right: 0;
+        }
+        
+        .sidebar.collapsed .backup-btn {
+            justify-content: center !important;
+            padding: 0.5rem !important;
+            min-height: 40px !important;
+            align-items: center !important;
+            text-align: center !important;
+            display: flex !important;
+        }
+        
+        .sidebar.collapsed .backup-btn i {
+            margin-right: 0 !important;
+            font-size: 1rem !important;
+            color: white !important;
+            display: block !important;
+            width: auto !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .sidebar-header {
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .sidebar-logo {
+            width: 4em !important;
+            height: 4em !important;
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+        
+        /* Заголовок в свернутом состоянии */
+        .sidebar.collapsed .sidebar-header {
+            padding: 1rem 0.5rem !important;
+            text-align: center !important;
+        }
+        
+        .sidebar.collapsed .sidebar-header i {
+            font-size: 1.5rem !important;
+            color: white !important;
+            display: block !important;
+            margin: 0 auto !important;
+        }
+        
+        .sidebar.collapsed .sidebar-header img {
+            width: 2em !important;
+            height: 2em !important;
+        }
+        
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+        
+        .nav-item {
+            margin: 0.25rem 1rem;
+        }
+        
+        .nav-link {
+            color: rgba(255,255,255,0.8) !important;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+        
+        .nav-link:hover {
+            color: white !important;
+            background-color: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+        
+        .nav-link.active {
+            color: white !important;
+            background-color: rgba(255,255,255,0.2);
+        }
+        
+        .nav-link i {
+            width: 20px;
+            margin-right: 0.75rem;
+        }
+        
+        /* Кнопка бэкапа внизу панели */
+        .backup-section {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 0.75rem;
+            background: rgba(0,0,0,0.1);
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .backup-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border: none;
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+        
+        .backup-btn:hover {
+            background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .backup-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .backup-btn i {
+            margin-right: 0.4rem;
+            font-size: 0.875rem;
+        }
+        
+        /* Кнопка сворачивания */
+        .sidebar .toggle-sidebar-btn,
+        .sidebar .btn.toggle-sidebar-btn,
+        .sidebar button.toggle-sidebar-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: 1px solid rgba(255,255,255,0.3) !important;
+            color: white !important;
+            transition: all 0.3s ease;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            display: block !important;
+            position: relative;
+            z-index: 1002;
+        }
+        
+        .toggle-sidebar-btn:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            border-color: rgba(255,255,255,0.6);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .sidebar.collapsed .toggle-sidebar-btn i {
+            transform: rotate(180deg);
+        }
+        
+        /* Кнопка сворачивания всегда видна */
+        .sidebar.collapsed .toggle-sidebar-btn,
+        .sidebar.collapsed .btn.toggle-sidebar-btn,
+        .sidebar.collapsed button.toggle-sidebar-btn {
+            display: block !important;
+            position: relative;
+            z-index: 1002;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: 1px solid rgba(255,255,255,0.3) !important;
+            color: white !important;
+        }
+        
+        /* Стрелка в свернутом состоянии */
+        .sidebar.collapsed .toggle-sidebar-btn i,
+        .sidebar.collapsed .btn.toggle-sidebar-btn i,
+        .sidebar.collapsed button.toggle-sidebar-btn i {
+            transform: rotate(180deg) !important;
+            font-size: 0.8rem !important;
+            color: white !important;
+            display: block !important;
+        }
+        
+        /* Основной контент */
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            transition: margin-left 0.3s ease;
+        }
+        
+        /* Основной контент при свернутой панели */
+        .main-content.expanded {
+            margin-left: 50px;
+        }
+        
+        /* Мобильное меню */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .sidebar.collapsed {
+                transform: translateX(-100%);
+                width: 250px;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+            
+            .main-content.expanded {
+                margin-left: 0;
+            }
+            
+            .mobile-menu-toggle {
+                display: block;
+            }
+            
+            .toggle-sidebar-btn,
+            .btn.toggle-sidebar-btn,
+            button.toggle-sidebar-btn {
+                display: block !important;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+                border: 1px solid rgba(255,255,255,0.3) !important;
+                color: white !important;
+            }
+        }
+        
+        /* Карточки */
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Кнопки */
+        .btn {
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        /* Загрузка */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255,255,255,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Мобильное меню -->
+    <button class="mobile-menu-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Боковая панель -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="mb-2">
+                <img src="{{ url_for('static', filename='icon/Акулы монтажа-round.png') }}" alt="Logo" class="sidebar-logo" style="object-fit: contain; cursor: pointer;" onclick="toggleSidebarDesktop()" title="Свернуть/развернуть панель">
+            </div>
+            <h5 class="mb-0">M_Kran Web</h5>
+            <small class="text-white-50">Система управления</small>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="nav-item">
+                <a class="nav-link" href="/" title="Главная">
+                    <i class="fas fa-home"></i>
+                    <span>Главная</span>
+                </a>
+            </div>
+            
+            <div class="nav-item">
+                <a class="nav-link" href="{{ url_for('database') }}" title="База данных">
+                    <i class="fas fa-database"></i>
+                    <span>База данных</span>
+                </a>
+            </div>
+            
+            <div class="nav-item">
+                <a class="nav-link" href="{{ url_for('id_formation_page') }}" title="Формирование ИД">
+                    <i class="fas fa-file-contract"></i>
+                    <span>Формирование ИД</span>
+                </a>
+            </div>
+            
+            <div class="nav-item">
+                <a class="nav-link" href="{{ url_for('scripts') }}" title="ETL Процессы">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>ETL Процессы</span>
+                </a>
+            </div>
+
+            <div class="nav-item">
+                <a class="nav-link" href="#" onclick="runAnalysisResultScript(event)" title="Результат Анализа">
+                    <i class="fas fa-microscope"></i>
+                    <span>Результат Анализа</span>
+                </a>
+            </div>
+            
+            {% if naks_parser_available %}
+            <div class="nav-item">
+                <a class="nav-link" href="{{ url_for('naks.naks_parser_page') }}" title="Парсинг НАКС">
+                    <i class="fas fa-search"></i>
+                    <span>Парсинг НАКС</span>
+                </a>
+            </div>
+            {% endif %}
+            
+            <div class="nav-item">
+                <a class="nav-link" href="{{ url_for('upload') }}" title="Загрузка">
+                    <i class="fas fa-upload"></i>
+                    <span>Загрузка</span>
+                </a>
+            </div>
+            
+            <div class="nav-item">
+                <a class="nav-link" href="{{ url_for('joint_manager') }}" title="Управление стыками">
+                    <i class="fas fa-link"></i>
+                    <span>Управление стыками</span>
+                </a>
+            </div>
+            
+            <div class="nav-item">
+                <a class="nav-link" href="{{ url_for('logs') }}" title="Журналы">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Журналы</span>
+                </a>
+            </div>
+            
+            <div class="nav-item">
+                <a class="nav-link" href="{{ url_for('reports') }}" title="Отчеты">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Отчеты</span>
+                </a>
+            </div>
+            
+            {% if statistics_available %}
+            <div class="nav-item">
+                <a class="nav-link" href="{{ url_for('statistics') }}" title="Статистика">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Статистика</span>
+                </a>
+            </div>
+            {% endif %}
+            
+
+            
+
+        </nav>
+        
+        <!-- Секция бэкапа внизу панели -->
+        <div class="backup-section">
+            <button class="backup-btn" id="backupBtn" onclick="createBackup()" title="Полный бэкап">
+                <i class="fas fa-archive fa-sm"></i>
+                <span>Полный бэкап</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <div class="main-content">
+        <!-- Сообщения -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Загрузка -->
+        <div class="loading d-none" id="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
+            <p class="mt-2">Обработка запроса...</p>
+        </div>
+
+        <!-- Контент страницы -->
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- JavaScript -->
+    <!-- jQuery (требуется для DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <!-- Универсальный модуль фильтрации таблиц -->
+    <script src="{{ url_for('static', filename='js/table_filter.js') }}"></script>
+    <!-- Оптимизатор таблиц для автоматического изменения размера столбцов -->
+    <script src="{{ url_for('static', filename='js/table_optimizer.js') }}"></script>
+    
+    <script>
+        // Функция для переключения боковой панели на мобильных устройствах
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('show');
+        }
+        
+        // Функция для сворачивания/разворачивания боковой панели на десктопе
+        function toggleSidebarDesktop() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.main-content');
+            
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+            
+            // Сохраняем состояние в localStorage
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+        
+        // Восстанавливаем состояние панели при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.main-content');
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            
+            // По умолчанию панель развернута, если нет сохраненного состояния
+            if (isCollapsed && window.innerWidth > 768) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('expanded');
+            } else {
+                // Убеждаемся, что панель развернута по умолчанию
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('expanded');
+                localStorage.setItem('sidebarCollapsed', 'false');
+            }
+        });
+        
+        // Закрыть боковую панель при клике вне её на мобильных устройствах
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const mobileToggle = document.querySelector('.mobile-menu-toggle');
+            
+            if (window.innerWidth <= 768) {
+                if (!sidebar.contains(event.target) && !mobileToggle.contains(event.target)) {
+                    sidebar.classList.remove('show');
+                }
+            }
+        });
+        
+        // Подсветка активного пункта меню
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+        
+        // Функция создания бэкапа
+        function createBackup() {
+            const backupBtn = document.getElementById('backupBtn');
+            const originalText = backupBtn.innerHTML;
+            
+            // Отключаем кнопку и показываем индикатор загрузки
+            backupBtn.disabled = true;
+            backupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Создание полного бэкапа...';
+            
+            // Показываем общий индикатор загрузки
+            showLoading();
+            
+            // Отправляем запрос на создание бэкапа
+            fetch('/api/backup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: 'full', // Создаем полный бэкап проекта
+                    name: null
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                
+                if (data.success) {
+                    // Показываем уведомление об успехе
+                    showNotification(`Полный бэкап создан успешно! Размер: ${data.size_mb} MB`, 'success');
+                    
+                    // Обновляем текст кнопки на короткое время
+                    backupBtn.innerHTML = '<i class="fas fa-check"></i> Готово!';
+                    setTimeout(() => {
+                        backupBtn.innerHTML = originalText;
+                        backupBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    // Показываем ошибку
+                    showNotification(`Ошибка: ${data.message}`, 'error');
+                    backupBtn.innerHTML = originalText;
+                    backupBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Ошибка создания бэкапа:', error);
+                showNotification('Ошибка сети при создании бэкапа', 'error');
+                backupBtn.innerHTML = originalText;
+                backupBtn.disabled = false;
+            });
+        }
+        
+        // Функция показа уведомления
+        function showNotification(message, type = 'info') {
+            // Создаем элемент уведомления
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Добавляем в body
+            document.body.appendChild(notification);
+            
+            // Автоматически удаляем через 5 секунд
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+        
+        // Функции показа/скрытия индикатора загрузки
+        function showLoading() {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.classList.remove('d-none');
+            }
+        }
+        
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.classList.add('d-none');
+            }
+        }
+
+        // Запуск внешнего скрипта анализа из панели навигации
+        function runAnalysisResultScript(event) {
+            if (event) {
+                event.preventDefault();
+            }
+
+            if (!confirm('Запустить скрипт "Результат Анализа"?')) {
+                return;
+            }
+
+            const candidatePaths = [
+                'D:\\МК_Кран\\МК_Кран_Кингесеп\\ОГС\\Журналы\\gost_32569_12_3_17_analyzer_v5.py',
+                'D:\\МК_Кран\\МК_Кран_Кингесеп\\ОГС\\Журналы\\gost_12_3_17_analyzer_dev_V5.py'
+            ];
+            const scriptDir = 'D:\\МК_Кран\\МК_Кран_Кингесеп\\ОГС\\Журналы';
+            const scriptArgs = [
+                '-c', `${scriptDir}\\config.v5_db.json`,
+                '-o', `${scriptDir}\\Результат_анализа_по_ГОСТ_32569_12_3_17_DEV__V5_${new Date().toLocaleDateString('ru-RU').replaceAll('.', '.')}.xlsx`
+            ];
+
+            showLoading();
+            showNotification('Запуск скрипта анализа...', 'info');
+
+            const tryRun = (idx) => {
+                if (idx >= candidatePaths.length) {
+                    hideLoading();
+                    showNotification('Скрипт анализа не найден ни по одному ожидаемому пути', 'error');
+                    return;
+                }
+
+                fetch('/run_script', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        script_path: candidatePaths[idx],
+                        script_args: scriptArgs
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        hideLoading();
+                        showNotification(`Скрипт анализа запущен. ID: ${data.script_id || '—'}`, 'success');
+                        if (data.script_id) {
+                            localStorage.setItem('pendingScriptMonitorId', data.script_id);
+                        }
+                        // Переходим на страницу ETL, где отображается live-лог
+                        window.location.href = '/scripts';
+                        return;
+                    }
+                    // Если путь не найден, пробуем следующий кандидат
+                    const msg = String(data.message || '');
+                    if (msg.includes('Скрипт не найден')) {
+                        tryRun(idx + 1);
+                        return;
+                    }
+                    hideLoading();
+                    showNotification(`Ошибка запуска: ${msg || 'неизвестно'}`, 'error');
+                })
+                .catch(error => {
+                    hideLoading();
+                    showNotification(`Ошибка запроса: ${error}`, 'error');
+                });
+            };
+
+            tryRun(0);
+        }
+        
+        // Функция показа модального окна с резервными копиями
+        function showBackupsModal() {
+            showLoading();
+            
+            fetch('/api/backups')
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    
+                    if (data.success) {
+                        let backupsHtml = '';
+                        if (data.backups && data.backups.length > 0) {
+                            data.backups.forEach(backup => {
+                                backupsHtml += `
+                                    <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                                        <div>
+                                            <strong>${backup.filename}</strong><br>
+                                            <small class="text-muted">Размер: ${backup.size_mb} MB | Создан: ${backup.created_at}</small>
+                                        </div>
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="downloadBackup('${backup.filename}')">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteBackup('${backup.filename}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        } else {
+                            backupsHtml = '<p class="text-muted">Резервные копии не найдены</p>';
+                        }
+                        
+                        // Показываем модальное окно
+                        const modal = new bootstrap.Modal(document.getElementById('backupsModal'));
+                        document.getElementById('backupsList').innerHTML = backupsHtml;
+                        modal.show();
+                    } else {
+                        showNotification(`Ошибка: ${data.message}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Ошибка получения списка бэкапов:', error);
+                    showNotification('Ошибка сети при получении списка бэкапов', 'error');
+                });
+        }
+        
+        // Функция скачивания бэкапа
+        function downloadBackup(filename) {
+            window.open(`/backups/${filename}`, '_blank');
+        }
+        
+        // Функция удаления бэкапа
+        function deleteBackup(filename) {
+            if (confirm(`Вы уверены, что хотите удалить резервную копию "${filename}"?`)) {
+                fetch(`/api/backup/${filename}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Резервная копия удалена успешно', 'success');
+                        showBackupsModal(); // Обновляем список
+                    } else {
+                        showNotification(`Ошибка: ${data.message}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка удаления бэкапа:', error);
+                    showNotification('Ошибка сети при удалении бэкапа', 'error');
+                });
+            }
+        }
+    </script>
+    
+    <!-- Модальное окно для резервных копий -->
+    <div class="modal fade" id="backupsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-save me-2"></i>
+                        Резервные копии
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="backupsList">
+                        <!-- Список резервных копий будет загружен здесь -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% block extra_js %}{% endblock %}
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

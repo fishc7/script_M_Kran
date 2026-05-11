@@ -1,0 +1,909 @@
+{% extends "base.html" %}
+
+{% block title %}Журнал НГС Эксперт - Таблица logs_lnk{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+    
+    .welcome-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: white;
+    }
+    
+    .welcome-subtitle {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+    
+    .controls-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 0.375rem 0.75rem;
+        margin-bottom: 2rem;
+        margin-top: 0.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .search-box {
+        border-radius: 25px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .search-box:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .data-table {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .table th {
+        background: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.9rem;
+        padding: 1rem 0.75rem;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .table td {
+        padding: 0.75rem;
+        font-size: 0.85rem;
+        vertical-align: middle;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(102, 126, 234, 0.05);
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .status-good {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .status-defect {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .status-pending {
+        background-color: #ffeb3b;
+        color: #000;
+        border: 1px solid #ffc107;
+        font-weight: bold;
+    }
+    
+    .back-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .back-button:hover {
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 10px;
+        padding: 0.5rem 0.75rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 1rem;
+    }
+    
+    .stats-card .h4 {
+        font-size: 1.1rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stats-card .small {
+        font-size: 0.75rem;
+    }
+    
+    /* Стили для фильтров столбцов */
+    .column-filter-row {
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .column-filter {
+        padding: 0.5rem 0.75rem;
+        border: none;
+        background: white;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        width: 100%;
+        transition: all 0.2s ease;
+    }
+    
+    .column-filter:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.25);
+        border-color: #667eea;
+    }
+    
+    .filter-icon {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        cursor: pointer;
+        font-size: 0.8rem;
+    }
+    
+    .filter-icon:hover {
+        color: #667eea;
+    }
+    
+    .filter-container {
+        position: relative;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .filter-active {
+        background-color: #e3f2fd;
+        border-left: 3px solid #667eea;
+    }
+    
+    .filter-clear-btn {
+        position: absolute;
+        right: 25px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        font-size: 0.7rem;
+        padding: 2px;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .filter-clear-btn:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="table-header">
+    <h1 class="welcome-title">
+        Журнал НГС Эксперт
+    </h1>
+    <p class="welcome-subtitle mb-0">Таблица logs_lnk - Основной журнал контроля качества</p>
+</div>
+
+<!-- Navigation -->
+<div class="row mb-2">
+    <div class="col-md-6">
+        <a href="{{ url_for('index') }}" class="back-button">
+            <i class="fas fa-arrow-left me-2"></i>
+            Назад к главной
+        </a>
+    </div>
+    <div class="col-md-6 text-end">
+        <div class="stats-card d-inline-block">
+            <div class="text-center">
+                <div class="h5 mb-0" style="font-size: 1.1rem;">{{ total_records | format_number }}</div>
+                <div class="text-muted" style="font-size: 0.75rem;">Всего записей</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Controls Panel -->
+<div class="controls-panel">
+    <div class="row">
+        <!-- Search -->
+        <div class="col-md-6 mb-3">
+            <form method="GET" action="{{ url_for('logs_lnk_table') }}" id="searchForm">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control search-box" name="search" 
+                           value="{{ search_term }}" placeholder="Поиск в таблице..." autocomplete="off">
+                    <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <!-- Скрытые поля для сохранения состояния -->
+                <input type="hidden" name="columns" value="{{ visible_columns | join(',') }}">
+            </form>
+        </div>
+        
+        <!-- Column Management -->
+        <div class="col-md-6 mb-3">
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary flex-fill" type="button" data-bs-toggle="collapse" data-bs-target="#columnSelector">
+                    <i class="fas fa-columns me-2"></i>
+                    Управление столбцами ({{ visible_columns | length }}/{{ all_columns | length }})
+                </button>
+                <button class="btn btn-success" type="button" onclick="exportFilteredToExcel()" title="Экспорт отфильтрованных данных в Excel">
+                    <i class="fas fa-file-excel me-2"></i>
+                    Экспорт в Excel
+                </button>
+                <button class="btn btn-outline-secondary" type="button" onclick="clearAllFilters()" title="Очистить все фильтры столбцов">
+                    <i class="fas fa-filter me-2"></i>
+                    Очистить фильтры
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Column Selector -->
+    <div class="collapse" id="columnSelector">
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-cog me-2"></i>
+                    Выберите столбцы для отображения
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for col in all_columns %}
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input column-checkbox-input" type="checkbox" 
+                                   value="{{ col }}" id="col_{{ col }}" 
+                                   {% if col in visible_columns %}checked{% endif %}>
+                            <label class="form-check-label" for="col_{{ col }}">
+                                {{ col }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary me-2" onclick="applyColumnSelection()">
+                        <i class="fas fa-check me-1"></i>Применить
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary me-2" onclick="selectAllColumns()">
+                        <i class="fas fa-check-double me-1"></i>Выбрать все
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary me-2" onclick="deselectAllColumns()">
+                        <i class="fas fa-times me-1"></i>Снять все выделение
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="selectDefaultColumns()">
+                        <i class="fas fa-undo me-1"></i>По умолчанию
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="table-container">
+    {% if records %}
+    <table class="table table-hover mb-0 data-table">
+            <thead>
+                <tr>
+                    {% for column in columns %}
+                    <th>
+                        {% if column == 'app_row_id' %}
+                            ID
+                        {% elif column == 'Чертеж' %}
+                            Чертеж
+                        {% elif column == 'Линия' %}
+                            Линия
+                        {% elif column == 'Лист' %}
+                            Лист
+                        {% elif column == 'Номер_стыка' %}
+                            № Стыка
+                        {% elif column == 'Диаметр_1' %}
+                            Диаметр 1
+                        {% elif column == 'Толщина_1' %}
+                            Толщина 1
+                        {% elif column == 'Дата_сварки' %}
+                            Дата сварки
+                        {% elif column == 'ВИК' %}
+                            ВИК
+                        {% elif column == 'Статус_ВИК' %}
+                            Статус ВИК
+                        {% elif column == 'РК' %}
+                            РК
+                        {% elif column == 'Статус_РК' %}
+                            Статус РК
+                        {% elif column == 'Титул' %}
+                            Титул
+                        {% elif column == 'Зона' %}
+                            Зона
+                        {% else %}
+                            {{ column }}
+                        {% endif %}
+                    </th>
+                    {% endfor %}
+                </tr>
+                <tr class="column-filter-row">
+                    {% for column in columns %}
+                    <td class="filter-container" data-column="{{ column }}">
+                        <input type="text" 
+                               class="column-filter" 
+                               placeholder="Фильтр {{ column }}..." 
+                               data-column="{{ column }}"
+                               value="{{ column_filters.get(column, '') }}"
+                               onkeyup="applyColumnFilter('{{ column }}', this.value)"
+                               onkeypress="handleFilterKeyPress(event, '{{ column }}')"
+                               onfocus="saveFilterFocus('{{ column }}')"
+                               onclick="saveFilterFocus('{{ column }}')">
+                        <button class="filter-clear-btn" 
+                                onclick="clearColumnFilter('{{ column }}')" 
+                                title="Очистить фильтр"
+                                style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <i class="fas fa-filter filter-icon" title="Фильтр по столбцу"></i>
+                    </td>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    {% for column in columns %}
+                    <td {% if record[column] and record[column]|length > 50 %}title="{{ record[column] }}"{% endif %}>
+                        {% set value = record[column] %}
+                        {% if column == 'Статус_ВИК' and value %}
+                            {% if value == 'Годен' %}
+                                <span class="status-badge status-good">{{ value }}</span>
+                            {% elif 'ремонт' in value.lower() or 'вырез' in value.lower() or value == 'Н/П' %}
+                                <span class="status-badge status-defect">{{ value }}</span>
+                            {% elif 'заявлен' in value.lower() %}
+                                <span class="status-badge status-pending">{{ value }}</span>
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        {% elif column == 'Статус_РК' and value %}
+                            {% if value == 'Годен' %}
+                                <span class="status-badge status-good">{{ value }}</span>
+                            {% elif 'ремонт' in value.lower() or 'вырез' in value.lower() or value == 'Н/П' %}
+                                <span class="status-badge status-defect">{{ value }}</span>
+                            {% elif 'заявлен' in value.lower() %}
+                                <span class="status-badge status-pending">{{ value }}</span>
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        {% elif column == 'app_row_id' %}
+                            <span class="badge bg-secondary">{{ value }}</span>
+                        {% else %}
+                            {% if value and 'заявлен' in value.lower() %}
+                                <span class="status-badge status-pending">{{ value }}</span>
+                            {% else %}
+                                {{ value if value is not none else '' }}
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Нет записей для отображения</h5>
+            <p class="text-muted">Попробуйте изменить фильтры или проверьте данные в базе</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination Controls -->
+{% from 'pagination_macro.html' import per_page_selector, pagination_controls, per_page_script, pagination_styles %}
+
+{{ pagination_styles('#667eea', '#764ba2') }}
+
+
+
+<!-- Pagination selector -->
+<div class="pagination-controls mb-3">
+    <div class="row align-items-center">
+        <div class="col-md-4">
+            <div class="d-flex align-items-center" style="padding-left: 20px;">
+                <label for="per_page_select" class="per-page-label" style="color: #6c757d; font-weight: 500; font-size: 0.9rem; margin-right: 0.75rem; white-space: nowrap;">Записей на странице:</label>
+                <div style="display: inline-block;">
+                    <button onclick="changePerPage(10)" style="margin: 2px; padding: 5px 10px; background: {% if per_page == 10 %}#667eea{% else %}#f8f9fa{% endif %}; color: {% if per_page == 10 %}white{% else %}#495057{% endif %}; border: 1px solid #dee2e6; border-radius: 6px; font-weight: 500; transition: all 0.3s ease;">10</button>
+                    <button onclick="changePerPage(25)" style="margin: 2px; padding: 5px 10px; background: {% if per_page == 25 %}#667eea{% else %}#f8f9fa{% endif %}; color: {% if per_page == 25 %}white{% else %}#495057{% endif %}; border: 1px solid #dee2e6; border-radius: 6px; font-weight: 500; transition: all 0.3s ease;">25</button>
+                    <button onclick="changePerPage(50)" style="margin: 2px; padding: 5px 10px; background: {% if per_page == 50 %}#667eea{% else %}#f8f9fa{% endif %}; color: {% if per_page == 50 %}white{% else %}#495057{% endif %}; border: 1px solid #dee2e6; border-radius: 6px; font-weight: 500; transition: all 0.3s ease;">50</button>
+                    <button onclick="changePerPage(100)" style="margin: 2px; padding: 5px 10px; background: {% if per_page == 100 %}#667eea{% else %}#f8f9fa{% endif %}; color: {% if per_page == 100 %}white{% else %}#495057{% endif %}; border: 1px solid #dee2e6; border-radius: 6px; font-weight: 500; transition: all 0.3s ease;">100</button>
+                    <button onclick="changePerPage(200)" style="margin: 2px; padding: 5px 10px; background: {% if per_page == 200 %}#667eea{% else %}#f8f9fa{% endif %}; color: {% if per_page == 200 %}white{% else %}#495057{% endif %}; border: 1px solid #dee2e6; border-radius: 6px; font-weight: 500; transition: all 0.3s ease;">200</button>
+                    <button onclick="changePerPage(500)" style="margin: 2px; padding: 5px 10px; background: {% if per_page == 500 %}#667eea{% else %}#f8f9fa{% endif %}; color: {% if per_page == 500 %}white{% else %}#495057{% endif %}; border: 1px solid #dee2e6; border-radius: 6px; font-weight: 500; transition: all 0.3s ease;">500</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 text-center">
+            <div class="text-muted">
+                {% if total_records > 0 %}
+                    Показано {{ ((page - 1) * per_page) + 1 }}-{{ [page * per_page, total_records] | min }} из {{ total_records | format_number }} записей
+                    {% if total_pages > 1 %}
+                        (страница {{ page }} из {{ total_pages }})
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <div style="padding-right: 20px;">
+                <!-- Место для дополнительных элементов -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ pagination_controls(page, total_pages, per_page, {'search': search_term, 'columns': visible_columns|join(',')}) }}
+
+{{ per_page_script() }}
+
+<script>
+// Функция для изменения количества записей на странице
+function changePerPage(newPerPage) {
+    const currentUrl = new URL(window.location);
+    currentUrl.searchParams.set('per_page', newPerPage);
+    currentUrl.searchParams.set('page', '1'); // Сбрасываем на первую страницу
+    window.location.href = currentUrl.toString();
+}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация появления таблицы
+    const table = document.querySelector('.data-table');
+    if (table) {
+        table.style.opacity = '0';
+        table.style.transform = 'translateY(20px)';
+        table.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        
+        setTimeout(() => {
+            table.style.opacity = '1';
+            table.style.transform = 'translateY(0)';
+        }, 100);
+    }
+    
+    // Автоматический поиск при вводе
+    const searchInput = document.querySelector('input[name="search"]');
+    if (searchInput) {
+        console.log('Найден элемент поиска:', searchInput);
+        
+        // Добавляем обработчик для события input
+        searchInput.addEventListener('input', function(e) {
+            console.log('Событие input сработало, значение:', this.value);
+            
+            // Отправляем форму
+            const form = document.getElementById('searchForm');
+            if (form) {
+                console.log('Отправляем форму поиска');
+                form.submit();
+            } else {
+                console.error('Форма поиска не найдена');
+            }
+        });
+        
+        // Восстанавливаем фокус после загрузки
+        if (searchInput.value) {
+            setTimeout(() => {
+                searchInput.focus();
+                const cursorPosition = searchInput.value.length;
+                searchInput.setSelectionRange(cursorPosition, cursorPosition);
+            }, 100);
+        }
+    } else {
+        console.error('Элемент поиска не найден');
+    }
+    });
+
+// Функции для управления столбцами
+function applyColumnSelection() {
+    const checkedColumns = Array.from(document.querySelectorAll('.column-checkbox-input:checked'))
+        .map(cb => cb.value);
+    
+    const currentUrl = new URL(window.location);
+    
+    // Если не выбрано ни одного столбца, передаем пустую строку
+    if (checkedColumns.length === 0) {
+        currentUrl.searchParams.set('columns', '');
+    } else {
+        currentUrl.searchParams.set('columns', checkedColumns.join(','));
+    }
+    
+    currentUrl.searchParams.set('page', '1'); // Сбрасываем на первую страницу
+    
+    window.location.href = currentUrl.toString();
+}
+
+function selectAllColumns() {
+    document.querySelectorAll('.column-checkbox-input').forEach(cb => {
+        cb.checked = true;
+    });
+}
+
+function deselectAllColumns() {
+    document.querySelectorAll('.column-checkbox-input').forEach(cb => {
+        cb.checked = false;
+    });
+}
+
+function selectDefaultColumns() {
+    const defaultColumns = [
+        'app_row_id', 'Чертеж', 'Линия', 'Лист', 'Номер_стыка', 
+        'Диаметр_1', 'Толщина_1', 'Дата_сварки', 'ВИК', 'Статус_ВИК', 
+        'РК', 'Статус_РК', 'Титул', 'Зона'
+    ];
+    
+    document.querySelectorAll('.column-checkbox-input').forEach(cb => {
+        cb.checked = defaultColumns.includes(cb.value);
+    });
+    
+    // Инициализируем фильтры столбцов
+    initializeColumnFilters();
+}
+
+function clearSearch() {
+    const searchInput = document.querySelector('input[name="search"]');
+    if (searchInput) {
+        searchInput.value = '';
+        // Отправляем форму с пустым поиском
+        const form = document.getElementById('searchForm');
+        form.submit();
+    }
+}
+
+// Функция показа уведомления
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    
+    // Убираем уведомление через 3 секунды
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+// Функция экспорта отфильтрованных данных в Excel
+async function exportFilteredToExcel() {
+    const exportBtn = event.target;
+    const originalText = exportBtn.innerHTML;
+    
+    try {
+        // Показываем индикатор загрузки
+        exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Подготовка экспорта...';
+        exportBtn.disabled = true;
+        
+        // Получаем текущие параметры фильтрации
+        const searchQuery = document.querySelector('input[name="search"]').value;
+        const selectedColumns = Array.from(document.querySelectorAll('.column-checkbox-input:checked'))
+            .map(cb => cb.value);
+        
+        // Формируем URL для экспорта
+        const exportUrl = new URL('/export_filtered/logs_lnk', window.location.origin);
+        exportUrl.searchParams.set('search', searchQuery);
+        exportUrl.searchParams.set('columns', selectedColumns.join(','));
+        
+        // Выполняем запрос на экспорт
+        const response = await fetch(exportUrl);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Получаем blob с файлом
+        const blob = await response.blob();
+        
+        // Создаем ссылку для скачивания
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Формируем имя файла
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timestamp = `${day}.${month}.${year}_${hours}-${minutes}-${seconds}`;
+        const fileName = `logs_lnk_filtered_${timestamp}.xlsx`;
+        a.download = fileName;
+        
+        // Запускаем скачивание
+        document.body.appendChild(a);
+        a.click();
+        
+        // Очищаем ресурсы
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Показываем уведомление об успехе
+        showNotification(`✅ Экспорт завершен! Файл "${fileName}" скачан.`);
+        
+    } catch (error) {
+        console.error('Ошибка экспорта:', error);
+        showNotification(`❌ Ошибка экспорта: ${error.message}`);
+    } finally {
+        // Восстанавливаем кнопку
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+    }
+}
+
+// Функции для фильтрации по столбцам
+let columnFilters = {};
+
+function applyColumnFilter(columnName, filterValue) {
+    console.log(`🔍 Обновляем фильтр для столбца "${columnName}": "${filterValue}"`);
+    
+    // Сохраняем фильтр
+    if (filterValue.trim() === '') {
+        delete columnFilters[columnName];
+    } else {
+        columnFilters[columnName] = filterValue;
+    }
+    
+    // Показываем/скрываем кнопку очистки
+    const clearBtn = document.querySelector(`[data-column="${columnName}"] .filter-clear-btn`);
+    const filterContainer = document.querySelector(`[data-column="${columnName}"]`);
+    
+    if (clearBtn && filterContainer) {
+        if (filterValue.trim() !== '') {
+            clearBtn.style.display = 'flex';
+            filterContainer.classList.add('filter-active');
+        } else {
+            clearBtn.style.display = 'none';
+            filterContainer.classList.remove('filter-active');
+        }
+    }
+    
+    // Сохраняем фокус текущего поля
+    const currentFilterInput = document.querySelector(`[data-column="${columnName}"] .column-filter`);
+    if (currentFilterInput === document.activeElement) {
+        sessionStorage.setItem('lastFocusedFilter', columnName);
+        console.log(`🔧 Сохранен фокус для фильтра: ${columnName}`);
+    }
+    
+    // НЕ применяем фильтры автоматически - только сохраняем значение
+}
+
+function handleFilterKeyPress(event, columnName) {
+    if (event.key === 'Enter') {
+        console.log(`🔍 Применяем фильтр по Enter для столбца "${columnName}"`);
+        applyServerFilters();
+    }
+}
+
+function clearColumnFilter(columnName) {
+    console.log(`🧹 Очищаем фильтр для столбца "${columnName}"`);
+    
+    // Очищаем поле ввода
+    const filterInput = document.querySelector(`[data-column="${columnName}"] .column-filter`);
+    if (filterInput) {
+        filterInput.value = '';
+    }
+    
+    // Удаляем фильтр
+    delete columnFilters[columnName];
+    
+    // Скрываем кнопку очистки и убираем активный стиль
+    const clearBtn = document.querySelector(`[data-column="${columnName}"] .filter-clear-btn`);
+    const filterContainer = document.querySelector(`[data-column="${columnName}"]`);
+    
+    if (clearBtn && filterContainer) {
+        clearBtn.style.display = 'none';
+        filterContainer.classList.remove('filter-active');
+    }
+    
+    // НЕ применяем фильтры автоматически - пользователь должен нажать Enter
+}
+}
+
+function applyServerFilters() {
+    console.log('🔄 Применяем фильтры через сервер...');
+    
+    // Собираем все значения фильтров из всех полей ввода
+    // Это гарантирует, что мы используем актуальные значения из всех столбцов
+    const allFilterInputs = document.querySelectorAll('.column-filter');
+    const collectedFilters = {};
+    
+    allFilterInputs.forEach(input => {
+        const columnName = input.getAttribute('data-column');
+        if (columnName) {
+            const filterValue = input.value.trim();
+            
+            // Обновляем объекты фильтров
+            if (filterValue !== '') {
+                collectedFilters[columnName] = filterValue;
+                // Также обновляем глобальный объект для совместимости
+                columnFilters[columnName] = filterValue;
+            } else {
+                // Удаляем из глобального объекта, если поле пустое
+                delete columnFilters[columnName];
+            }
+        }
+    });
+    
+    console.log('Собранные фильтры:', collectedFilters);
+    
+    // Строим URL с параметрами фильтров
+    const url = new URL(window.location);
+    
+    // Очищаем старые параметры фильтров
+    for (const key of url.searchParams.keys()) {
+        if (key.startsWith('filter_')) {
+            url.searchParams.delete(key);
+        }
+    }
+    
+    // Добавляем новые параметры фильтров из собранных значений
+    for (const [columnName, filterValue] of Object.entries(collectedFilters)) {
+        if (filterValue.trim() !== '') {
+            url.searchParams.set(`filter_${columnName}`, filterValue);
+        }
+    }
+    
+    // Сбрасываем на первую страницу при изменении фильтров
+    url.searchParams.set('page', '1');
+    
+    console.log(`🔗 Переходим по URL: ${url.toString()}`);
+    
+    // Переходим на новую страницу с фильтрами
+    window.location.href = url.toString();
+}
+
+function clearAllFilters() {
+    console.log('🧹 Очищаем все фильтры');
+    
+    // Очищаем все поля фильтров
+    const filterInputs = document.querySelectorAll('.column-filter');
+    filterInputs.forEach(input => {
+        input.value = '';
+    });
+    
+    // Скрываем все кнопки очистки
+    const clearBtns = document.querySelectorAll('.filter-clear-btn');
+    clearBtns.forEach(btn => {
+        btn.style.display = 'none';
+    });
+    
+    // Убираем активные стили
+    const filterContainers = document.querySelectorAll('.filter-container');
+    filterContainers.forEach(container => {
+        container.classList.remove('filter-active');
+    });
+    
+    // Очищаем объект фильтров
+    columnFilters = {};
+    
+    // Переходим на страницу без фильтров
+    const url = new URL(window.location);
+    
+    // Удаляем все параметры фильтров
+    for (const key of url.searchParams.keys()) {
+        if (key.startsWith('filter_')) {
+            url.searchParams.delete(key);
+        }
+    }
+    
+    // Сбрасываем на первую страницу
+    url.searchParams.set('page', '1');
+    
+    console.log(`🔗 Переходим по URL без фильтров: ${url.toString()}`);
+    window.location.href = url.toString();
+}
+
+function initializeColumnFilters() {
+    console.log('🔧 Инициализация фильтров столбцов...');
+    
+    // Инициализируем фильтры из URL параметров
+    const url = new URL(window.location);
+    columnFilters = {};
+    
+    for (const [key, value] of url.searchParams.entries()) {
+        if (key.startsWith('filter_') && value.trim() !== '') {
+            const columnName = key.substring(7); // Убираем префикс 'filter_'
+            columnFilters[columnName] = value;
+            
+            // Показываем кнопку очистки и активный стиль
+            const clearBtn = document.querySelector(`[data-column="${columnName}"] .filter-clear-btn`);
+            const filterContainer = document.querySelector(`[data-column="${columnName}"]`);
+            
+            if (clearBtn && filterContainer) {
+                clearBtn.style.display = 'flex';
+                filterContainer.classList.add('filter-active');
+            }
+        }
+    }
+    
+    console.log(`🔧 Инициализировано фильтров: ${Object.keys(columnFilters).length}`);
+    if (Object.keys(columnFilters).length > 0) {
+        console.log('🔧 Активные фильтры:', columnFilters);
+    }
+    
+    // Восстанавливаем фокус на последнем активном поле фильтра
+    restoreFilterFocus();
+}
+
+function restoreFilterFocus() {
+    // Проверяем, был ли фокус на поле фильтра
+    const lastFocusedFilter = sessionStorage.getItem('lastFocusedFilter');
+    if (lastFocusedFilter) {
+        const filterInput = document.querySelector(`[data-column="${lastFocusedFilter}"] .column-filter`);
+        if (filterInput) {
+            // Восстанавливаем фокус с небольшой задержкой
+            setTimeout(() => {
+                filterInput.focus();
+                // Устанавливаем курсор в конец текста
+                const length = filterInput.value.length;
+                filterInput.setSelectionRange(length, length);
+                console.log(`🔧 Восстановлен фокус на фильтре: ${lastFocusedFilter}`);
+            }, 100);
+        }
+        // Очищаем сохраненный фокус
+        sessionStorage.removeItem('lastFocusedFilter');
+    }
+}
+
+function saveFilterFocus(columnName) {
+    sessionStorage.setItem('lastFocusedFilter', columnName);
+    console.log(`🔧 Сохранен фокус для фильтра: ${columnName}`);
+}
+</script>
+{% endblock %}

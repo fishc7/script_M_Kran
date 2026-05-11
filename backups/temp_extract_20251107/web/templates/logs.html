@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Журналы - M_Kran Web Interface{% endblock %}
+
+{% block head %}
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+{% endblock %}
+
+{% block content %}
+<!-- Заголовок страницы -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div class="mb-2">
+                    <i class="fas fa-file-alt fa-2x text-white"></i>
+                </div>
+                <h2 class="mb-2 text-white">Журналы и отчеты</h2>
+                <p class="card-text text-white-50">Просмотр и анализ данных из различных источников</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Сетка журналов -->
+<div class="row">
+    <!-- Журнал НГС Эксперт -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100" style="transition: transform 0.3s ease;">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-clipboard-list fa-3x text-primary"></i>
+                </div>
+                <h5 class="card-title">Журнал НГС Эксперт</h5>
+                <p class="card-text text-muted">Основной журнал контроля качества с данными ВИК и РК</p>
+                <div class="mt-3">
+                    <a href="{{ url_for('view_table', table_name='logs_lnk') }}" class="btn btn-primary">
+                        <i class="fas fa-eye me-2"></i>
+                        Просмотреть
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Журнал сварки -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100" style="transition: transform 0.3s ease;">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-fire fa-3x text-warning"></i>
+                </div>
+                <h5 class="card-title">Журнал сварки</h5>
+                <p class="card-text text-muted">Данные о сварочных работах и контроле качества сварных швов</p>
+                <div class="mt-3">
+                    <a href="{{ url_for('view_table', table_name='wl_china') }}" class="btn btn-warning">
+                        <i class="fas fa-eye me-2"></i>
+                        Просмотреть
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Журнал ремонта -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100" style="transition: transform 0.3s ease;">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-tools fa-3x text-success"></i>
+                </div>
+                <h5 class="card-title">Журнал ремонта</h5>
+                <p class="card-text text-muted">Информация о ремонтных работах и устранении дефектов</p>
+                <div class="mt-3">
+                    <a href="{{ url_for('view_table', table_name='weld_repair_log') }}" class="btn btn-success">
+                        <i class="fas fa-eye me-2"></i>
+                        Просмотреть
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Журнал результатов ПОСЛЕ Ремонта -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100" style="transition: transform 0.3s ease;">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-certificate fa-3x text-danger"></i>
+                </div>
+                <h5 class="card-title" style="color: red;">Журнал результатов ПОСЛЕ Ремонта</h5>
+                <p class="card-text text-muted">Отчеты по неразрушающему контролю ПОСЛЕ Ремонта</p>
+                <div class="mt-3">
+                    <a href="{{ url_for('nk_results') }}" class="btn btn-danger">
+                        <i class="fas fa-eye me-2"></i>
+                        Просмотреть
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Последнее состояние стыка -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100" style="transition: transform 0.3s ease;">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-link fa-3x text-success"></i>
+                </div>
+                <h5 class="card-title">Последнее состояние стыка</h5>
+                <p class="card-text text-muted">Актуальное состояние сварных соединений с RT контролем</p>
+                <div class="mt-3">
+                    <a href="{{ url_for('view_table', table_name='condition_weld') }}" class="btn btn-success">
+                        <i class="fas fa-table me-2"></i>
+                        Просмотреть
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Карточка статистики -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100" style="transition: transform 0.3s ease;">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-chart-pie fa-3x text-info"></i>
+                </div>
+                <h5 class="card-title">Статистика по статусам</h5>
+                <p class="card-text text-muted">Анализ статусов РК и ВИК с детальной разбивкой</p>
+                
+                <!-- Краткая статистика -->
+                {% if brief_stats %}
+                <div class="mt-3 mb-3">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <div class="h6 text-primary mb-1">{{ brief_stats.total_records | format_number }}</div>
+                                <small class="text-muted">Всего записей</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="h6 text-success mb-1">{{ brief_stats.rk_statuses_count }}</div>
+                            <small class="text-muted">РК статусов</small>
+                        </div>
+                    </div>
+                    <div class="row text-center mt-2">
+                        <div class="col-12">
+                            <div class="h6 text-warning mb-1">{{ brief_stats.vik_statuses_count }}</div>
+                            <small class="text-muted">ВИК статусов</small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('enhanced_filter') }}" class="btn btn-info">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Подробная статистика
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Экспорт данных -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100" style="transition: transform 0.3s ease;">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-download fa-3x text-secondary"></i>
+                </div>
+                <h5 class="card-title">Экспорт данных</h5>
+                <p class="card-text text-muted">Выгрузка данных в различных форматах для отчетности</p>
+                <div class="mt-3">
+                    <a href="{{ url_for('upload') }}" class="btn btn-secondary">
+                        <i class="fas fa-file-export me-2"></i>
+                        Экспорт
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Дополнительная информация -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle text-primary me-2"></i>
+                    Информация о журналах
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Журнал НГС Эксперт</h6>
+                        <p class="text-muted small">
+                            Основной источник данных о контроле качества. Содержит информацию о ВИК (визуальный контроль), 
+                            РК (радиографический контроль) и других видах контроля.
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-warning">Журнал сварки</h6>
+                        <p class="text-muted small">
+                            Детальная информация о сварочных работах, включая параметры сварки, 
+                            квалификацию сварщиков и результаты контроля сварных швов.
+                        </p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-success">Журнал ремонта</h6>
+                        <p class="text-muted small">
+                            Данные о ремонтных работах, устранении дефектов и восстановлении 
+                            качества продукции после выявления несоответствий.
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-danger">Журнал результатов ПОСЛЕ Ремонта</h6>
+                        <p class="text-muted small">
+                            Отчеты по неразрушающему контролю ПОСЛЕ Ремонта с результатами 
+                            испытаний и сертификатами качества продукции.
+                        </p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-success">Последнее состояние стыка</h6>
+                        <p class="text-muted small">
+                            Аналитическая страница для мониторинга актуального состояния сварных соединений с радиографическим контролем (RT). 
+                            Предоставляет автоматический выбор последних записей, подсчет количества RT записей, динамическую статистику по статусам РК, 
+                            продвинутую фильтрацию и экспорт данных в Excel.
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-info">Статистика по статусам</h6>
+                        <p class="text-muted small">
+                            Детальная аналитика по статусам РК и ВИК с визуализацией данных. Показывает распределение статусов, 
+                            процентные соотношения, количество пустых записей и предоставляет интерактивные карточки статистики.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+}
+
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+.btn-purple {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    color: white;
+}
+
+.btn-purple:hover {
+    background-color: #5a32a3;
+    border-color: #5a32a3;
+    color: white;
+}
+</style>
+{% endblock %}

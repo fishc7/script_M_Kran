@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M-Kran System - Vue.js</title>
+    <meta name="description" content="Современный веб-интерфейс для системы управления данными M-Kran">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    <!-- Vue.js CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='vue-dist/assets/main-9839803b.css') }}">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="{{ url_for('static', filename='vue-dist/assets/main-9839803b.css') }}" as="style">
+    <link rel="preload" href="{{ url_for('static', filename='vue-dist/assets/main-2b923fe0.js') }}" as="script">
+</head>
+<body>
+    <div id="app">
+        <!-- Loading spinner -->
+        <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+                <p class="mt-4 text-gray-600">Загрузка приложения...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vue.js application -->
+    <script type="module" src="{{ url_for('static', filename='vue-dist/assets/main-2b923fe0.js') }}"></script>
+    
+    <!-- Fallback for non-JS users -->
+    <noscript>
+        <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div class="text-center">
+                <h1 class="text-2xl font-bold text-gray-900 mb-4">JavaScript отключен</h1>
+                <p class="text-gray-600 mb-4">Для работы с приложением необходимо включить JavaScript</p>
+                <a href="{{ url_for('index') }}" class="text-primary-600 hover:text-primary-800">
+                    Вернуться к основному интерфейсу
+                </a>
+            </div>
+        </div>
+    </noscript>
+</body>
+</html>

@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}Загрузка файлов - M_Kran Web Interface{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">
+                    <i class="fas fa-upload me-2"></i>
+                    Загрузка файлов
+                </h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">
+                    Загрузка файлов для обработки в системе M_Kran
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>
+                    Загрузить новый файл
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Выберите файл</label>
+                        <input type="file" class="form-control" id="file" name="file" required>
+                        <div class="form-text">
+                            Поддерживаемые форматы: Excel (.xlsx, .xls), CSV (.csv), PDF (.pdf)
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-1"></i>Загрузить файл
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Информация о загрузке
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>Поддерживаемые форматы:</h6>
+                <ul>
+                    <li><strong>Excel файлы</strong> (.xlsx, .xls) - для загрузки данных</li>
+                    <li><strong>CSV файлы</strong> (.csv) - для импорта данных</li>
+                    <li><strong>PDF файлы</strong> (.pdf) - для обработки документов</li>
+                </ul>
+                
+                <h6>Ограничения:</h6>
+                <ul>
+                    <li>Максимальный размер файла: 16 МБ</li>
+                    <li>Файлы сохраняются в папке uploads</li>
+                    <li>Оригинальные имена файлов сохраняются (включая русские символы)</li>
+                    <li>При совпадении имен добавляется номер в скобках</li>
+                </ul>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <strong>Совет:</strong> После загрузки файла используйте соответствующие скрипты для его обработки.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-folder-open me-2"></i>
+                    Загруженные файлы
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if files %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Имя файла</th>
+                                    <th>Размер</th>
+                                    <th>Дата загрузки</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in files %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-file me-2"></i>
+                                        {{ file.name }}
+                                    </td>
+                                    <td>
+                                        {% if file.size < 1024 %}
+                                            {{ file.size }} Б
+                                        {% elif file.size < 1024 * 1024 %}
+                                            {{ (file.size / 1024)|round(1) }} КБ
+                                        {% else %}
+                                            {{ (file.size / (1024 * 1024))|round(1) }} МБ
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ file.modified.strftime('%d.%m.%Y %H:%M') }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-primary" 
+                                                    onclick="downloadFile('{{ file.name }}')">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" 
+                                                    onclick="deleteFile('{{ file.name }}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Загруженные файлы отсутствуют. Загрузите первый файл выше.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2 text-danger"></i>
+                    Подтверждение удаления
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить файл <strong id="deleteFileName"></strong>?</p>
+                <p class="text-muted">Это действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                    <i class="fas fa-trash me-1"></i>Удалить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let fileToDelete = '';
+
+function downloadFile(fileName) {
+    // Создаем временную ссылку для скачивания
+    const link = document.createElement('a');
+    link.href = `/download/${fileName}`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function deleteFile(fileName) {
+    fileToDelete = fileName;
+    document.getElementById('deleteFileName').textContent = fileName;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function confirmDelete() {
+    if (!fileToDelete) return;
+    
+    showLoading();
+    
+    fetch(`/delete_file/${fileToDelete}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        
+        if (data.success) {
+            // Перезагружаем страницу для обновления списка файлов
+            location.reload();
+        } else {
+            alert('Ошибка удаления файла: ' + data.message);
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        alert('Ошибка удаления файла: ' + error);
+    });
+    
+    // Закрываем модальное окно
+    bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+}
+
+// Drag and drop функциональность
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('file');
+    const uploadArea = document.querySelector('.card-body');
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight(e) {
+        uploadArea.classList.add('border-primary');
+    }
+    
+    function unhighlight(e) {
+        uploadArea.classList.remove('border-primary');
+    }
+    
+    uploadArea.addEventListener('drop', handleDrop, false);
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            fileInput.files = files;
+        }
+    }
+});
+</script>
+
+<style>
+.card-body {
+    transition: border-color 0.3s ease;
+}
+
+.card-body.border-primary {
+    border: 2px dashed #007bff !important;
+}
+</style>
+{% endblock %} 

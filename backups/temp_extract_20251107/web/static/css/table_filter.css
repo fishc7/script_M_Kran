@@ -1,0 +1,248 @@
+/**
+ * Стили для фильтрации таблиц
+ */
+
+/* Автоматическое изменение размера столбцов */
+.data-table {
+    width: 100%;
+    table-layout: auto; /* Позволяет столбцам автоматически подстраиваться под содержимое */
+}
+
+.data-table th,
+.data-table td {
+    white-space: nowrap; /* Предотвращает перенос текста */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Добавляет многоточие для длинного текста */
+    max-width: 300px; /* Максимальная ширина столбца */
+    min-width: 80px; /* Минимальная ширина столбца */
+}
+
+/* Для столбцов с длинным содержимым */
+.data-table th.wide-column,
+.data-table td.wide-column {
+    max-width: 400px;
+    white-space: nowrap; /* Убираем перенос строк */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Для столбцов с коротким содержимым (ID, номера) */
+.data-table th.narrow-column,
+.data-table td.narrow-column {
+    max-width: 120px;
+    min-width: 60px;
+    text-align: center;
+}
+
+/* Для столбцов с датами */
+.data-table th.date-column,
+.data-table td.date-column {
+    max-width: 150px;
+    min-width: 100px;
+    text-align: center;
+}
+
+/* Для столбцов с числовыми данными */
+.data-table th.number-column,
+.data-table td.number-column {
+    max-width: 120px;
+    min-width: 80px;
+    text-align: right;
+}
+
+/* Адаптивная таблица для мобильных устройств */
+@media (max-width: 768px) {
+    .data-table {
+        font-size: 0.8rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 0.5rem 0.25rem;
+        max-width: 200px;
+        min-width: 60px;
+    }
+    
+    .data-table th.wide-column,
+    .data-table td.wide-column {
+        max-width: 250px;
+    }
+}
+
+/* Горизонтальная прокрутка для таблиц */
+.table-container {
+    overflow-x: auto;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+/* Стили для подсветки найденного текста */
+.highlight {
+    background-color: #ffeb3b;
+    color: #000;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+/* Стили для поля поиска */
+#tableFilter,
+[id*="Filter"] {
+    border-radius: 0.375rem 0 0 0.375rem;
+    transition: all 0.3s ease;
+}
+
+#tableFilter:focus,
+[id*="Filter"]:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    border-color: #dc3545;
+}
+
+/* Анимация для сообщения об отсутствии результатов */
+#noResults,
+[id*="NoResults"] {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(-10px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* Стили для контейнера поиска */
+.search-container {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+/* Стили для статистики фильтрации */
+.filter-stats {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* Стили для кнопки очистки */
+.btn-clear-filter {
+    border-radius: 0 0.375rem 0.375rem 0;
+}
+
+/* Стили для селектора столбцов */
+.column-selector {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.column-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin: 5px 0;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+}
+
+.column-item:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+    transform: translateX(5px);
+}
+
+/* Принудительные стили для выбранных столбцов */
+.column-item.selected {
+    background-color: #d1ecf1 !important;
+    border-color: #17a2b8 !important;
+    color: #0c5460 !important;
+    box-shadow: 0 0 5px rgba(23, 162, 184, 0.3) !important;
+    position: relative !important;
+}
+
+.column-item.selected i.fa-check {
+    color: #28a745 !important;
+    font-weight: bold !important;
+    display: inline-block !important;
+}
+
+/* Принудительные стили для не выбранных столбцов */
+.column-item:not(.selected) {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    color: #495057 !important;
+    box-shadow: none !important;
+}
+
+/* Дополнительные стили для гарантии */
+.column-item.selected {
+    background-color: #d1ecf1 !important;
+    border-color: #17a2b8 !important;
+    color: #0c5460 !important;
+}
+
+.column-item:not(.selected) {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+}
+
+/* Максимально принудительные стили через атрибуты */
+div[class*="column-item"][class*="selected"] {
+    background-color: #d1ecf1 !important;
+    border-color: #17a2b8 !important;
+    color: #0c5460 !important;
+}
+
+div[class*="column-item"]:not([class*="selected"]) {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    color: #495057 !important;
+}
+
+.column-controls {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .search-container {
+        padding: 10px;
+    }
+    
+    .filter-stats {
+        font-size: 0.8rem;
+    }
+    
+    .input-group {
+        flex-direction: column;
+    }
+    
+    .input-group > * {
+        border-radius: 0.375rem !important;
+        margin-bottom: 5px;
+    }
+    
+    .column-selector {
+        max-height: 300px;
+    }
+    
+    .column-item {
+        padding: 8px;
+        margin: 3px 0;
+    }
+}

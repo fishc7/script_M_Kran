@@ -1,0 +1,411 @@
+/**
+ * Улучшения для таблиц - автоматическое изменение размера столбцов
+ */
+
+/* Основные стили для таблиц с автоматическим изменением размера */
+.data-table {
+    width: 100%;
+    table-layout: auto; /* Позволяет столбцам автоматически подстраиваться под содержимое */
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    white-space: nowrap; /* Предотвращает перенос текста */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Добавляет многоточие для длинного текста */
+    max-width: 300px; /* Максимальная ширина столбца */
+    min-width: 80px; /* Минимальная ширина столбца */
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+/* Для столбцов с длинным содержимым */
+.data-table th.wide-column,
+.data-table td.wide-column {
+    max-width: 400px;
+    white-space: nowrap; /* Убираем перенос строк */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Для столбцов с коротким содержимым (ID, номера) */
+.data-table th.narrow-column,
+.data-table td.narrow-column {
+    max-width: 120px;
+    min-width: 60px;
+    text-align: center;
+    font-weight: 500;
+}
+
+/* Для столбцов с датами */
+.data-table th.date-column,
+.data-table td.date-column {
+    max-width: 150px;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+}
+
+/* Для столбцов с числовыми данными */
+.data-table th.number-column,
+.data-table td.number-column {
+    max-width: 120px;
+    min-width: 80px;
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+}
+
+/* Контейнер с горизонтальной прокруткой */
+.table-container {
+    overflow-x: auto;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    background: white;
+    margin-bottom: 2rem;
+}
+
+/* Стили для заголовков таблиц */
+.data-table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 1rem 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border: none;
+}
+
+/* Стили для строк таблицы */
+.data-table tbody tr {
+    transition: all 0.3s ease;
+    cursor: pointer; /* Добавляем курсор-указатель для всех строк */
+    position: relative;
+}
+
+/* Hover эффект для строк */
+.data-table tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.08) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Универсальные стили для выделения строк */
+.data-table tbody tr.selected,
+.data-table tbody tr.multi-selected,
+.data-table tbody tr.ctrl-selected,
+.data-table tbody tr.shift-selected,
+.table tbody tr.selected,
+.table tbody tr.multi-selected,
+.table tbody tr.ctrl-selected,
+.table tbody tr.shift-selected {
+    background-color: rgba(102, 126, 234, 0.25) !important;
+    border-left: 4px solid #667eea !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
+}
+
+/* Универсальные стили для ячеек выделенных строк */
+.data-table tbody tr.selected td,
+.data-table tbody tr.multi-selected td,
+.data-table tbody tr.ctrl-selected td,
+.data-table tbody tr.shift-selected td,
+.table tbody tr.selected td,
+.table tbody tr.multi-selected td,
+.table tbody tr.ctrl-selected td,
+.table tbody tr.shift-selected td {
+    background-color: rgba(102, 126, 234, 0.25) !important;
+}
+
+/* Убираем псевдоэлемент ::before, так как теперь выделяем всю строку */
+.data-table tbody tr::before {
+    display: none;
+}
+
+/* Стили для ячеек с длинным содержимым */
+.data-table td[title] {
+    cursor: help;
+}
+
+/* Адаптивная таблица для мобильных устройств */
+@media (max-width: 768px) {
+    .data-table {
+        font-size: 0.8rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 0.5rem 0.25rem;
+        max-width: 200px;
+        min-width: 60px;
+        white-space: nowrap; /* Убираем перенос строк на мобильных */
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .data-table th.wide-column,
+    .data-table td.wide-column {
+        max-width: 250px;
+        white-space: nowrap; /* Убираем перенос строк */
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .data-table th.narrow-column,
+    .data-table td.narrow-column {
+        max-width: 80px;
+        min-width: 50px;
+    }
+}
+
+/* Стили для оптимизированных таблиц */
+.optimized-table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Стили для статусных бейджей */
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Дополнительные стили для предотвращения переноса строк */
+.data-table td,
+.data-table th {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Стили для ячеек с длинным содержимым - показываем полный текст при наведении */
+.data-table td[title] {
+    cursor: help;
+}
+
+/* Убираем перенос строк для всех типов столбцов */
+.data-table .narrow-column,
+.data-table .wide-column,
+.data-table .date-column,
+.data-table .number-column {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.status-badge.status-good {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-badge.status-defect {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+/* Анимация для загрузки таблиц */
+@keyframes tableFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.data-table {
+    animation: tableFadeIn 0.5s ease-out;
+}
+
+/* Стили для пустых ячеек */
+.data-table td:empty::before {
+    content: "—";
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Улучшенные стили для скроллбара */
+.table-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+/* Стили для выделения строк */
+.data-table tbody tr.selected {
+    background-color: rgba(102, 126, 234, 0.1) !important;
+    border-left: 4px solid #667eea;
+}
+
+/* Стили для поля "Чертеж" в модальном окне НК */
+#view-drawing {
+    font-size: 0.9rem !important;
+    min-height: 38px !important;
+    word-wrap: break-word !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    line-height: 1.4 !important;
+}
+
+/* Улучшенные стили для модального окна НК */
+.modal-xl .modal-body {
+    padding: 1.5rem;
+}
+
+.modal-xl .form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.modal-xl .form-control-sm {
+    border-radius: 0.375rem;
+    border: 1px solid #ced4da;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.modal-xl .form-control-sm:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* Стили для сортировки */
+.data-table th.sortable {
+    cursor: pointer;
+    position: relative;
+}
+
+.data-table th.sortable:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.data-table th.sortable::after {
+    content: "↕";
+    position: absolute;
+    right: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.8rem;
+}
+
+.data-table th.sortable.asc::after {
+    content: "↑";
+    color: white;
+}
+
+.data-table th.sortable.desc::after {
+    content: "↓";
+    color: white;
+}
+
+/* Панель управления выделением */
+.selection-controls {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.selection-controls .btn {
+    border-radius: 8px;
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.selection-controls .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.selection-info {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* Стили для таблиц без выделения (если нужно отключить) */
+.data-table.no-selection tbody tr {
+    cursor: default;
+}
+
+.data-table.no-selection tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+    transform: none;
+    box-shadow: none;
+}
+
+.data-table.no-selection tbody tr::before {
+    display: none;
+}
+
+/* Дополнительные стили для лучшей видимости выделения */
+.data-table tbody tr.selected td,
+.data-table tbody tr.multi-selected td,
+.data-table tbody tr.ctrl-selected td,
+.data-table tbody tr.shift-selected td,
+.table tbody tr.selected td,
+.table tbody tr.multi-selected td,
+.table tbody tr.ctrl-selected td,
+.table tbody tr.shift-selected td {
+    border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Переопределяем Bootstrap стили для выделенных строк */
+.table-hover tbody tr.selected:hover,
+.table-hover tbody tr.multi-selected:hover,
+.table-hover tbody tr.ctrl-selected:hover,
+.table-hover tbody tr.shift-selected:hover {
+    background-color: inherit !important;
+}
+
+/* Дополнительные стили для всех типов таблиц */
+table tbody tr.selected,
+table tbody tr.multi-selected,
+table tbody tr.ctrl-selected,
+table tbody tr.shift-selected {
+    background-color: inherit !important;
+}
+
+/* Стили для бейджей в выделенных строках */
+.data-table tbody tr.selected .badge,
+.data-table tbody tr.multi-selected .badge,
+.data-table tbody tr.ctrl-selected .badge,
+.data-table tbody tr.shift-selected .badge {
+    opacity: 0.9;
+    font-weight: 600;
+}

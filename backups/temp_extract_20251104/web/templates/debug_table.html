@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Debug - Table Data{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2>Отладка данных таблицы {{ table_title }}</h2>
+    
+    <div class="row">
+        <div class="col-12">
+            <h4>Информация о данных:</h4>
+            <p><strong>Колонки:</strong> {{ columns|join(', ') }}</p>
+            <p><strong>Количество записей:</strong> {{ records|length }}</p>
+        </div>
+    </div>
+    
+    {% if records %}
+    <div class="row">
+        <div class="col-12">
+            <h4>Первые 3 записи:</h4>
+            {% for record in records[:3] %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5>Запись {{ loop.index }}</h5>
+                </div>
+                <div class="card-body">
+                    {% for column in columns %}
+                    <div class="row mb-2">
+                        <div class="col-3">
+                            <strong>{{ column }}:</strong>
+                        </div>
+                        <div class="col-9">
+                            {% set value = record[column] %}
+                            {% if value is not none %}
+                                <code>{{ value }}</code>
+                                <br>
+                                <small class="text-muted">
+                                    Тип: {{ value.__class__.__name__ }}, 
+                                    Длина: {{ value|string|length }},
+                                    Колонка lower: "{{ column.lower() }}",
+                                    Проверка full_path: {{ column.lower() == 'full_path' }},
+                                    Проверка значения: {{ value and (value|string|length > 0) }}
+                                </small>
+                                {% if column.lower() == 'full_path' and value %}
+                                <br><span class="badge bg-success">УСЛОВИЕ ВЫПОЛНЕНО - КНОПКА ДОЛЖНА ПОКАЗАТЬСЯ!</span>
+                                {% endif %}
+                            {% else %}
+                                <em>NULL</em>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="{{ url_for('view_table', table_name=table_name) }}" class="btn btn-primary">
+                Вернуться к обычному просмотру
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

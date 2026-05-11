@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест API - Извлечение чисел</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .result {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            margin-top: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест API - Извлечение чисел</h1>
+    
+    <div class="test-section">
+        <h2>1. Тест получения списка таблиц</h2>
+        <button onclick="testGetTables()">Получить список таблиц</button>
+        <div id="tablesResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Тест получения столбцов таблицы</h2>
+        <input type="text" id="tableName" placeholder="Введите название таблицы" value="logs_lnk">
+        <button onclick="testGetColumns()">Получить столбцы</button>
+        <div id="columnsResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Тест извлечения чисел</h2>
+        <textarea id="testText" rows="3" placeholder="Введите текст для тестирования">S123, F456, Стык 789</textarea>
+        <select id="testMode">
+            <option value="all">Все режимы</option>
+            <option value="simple">Простое извлечение</option>
+            <option value="clean">Удаление префиксов S/F</option>
+            <option value="combined">Комбинированный</option>
+        </select>
+        <button onclick="testExtractNumbers()">Извлечь числа</button>
+        <div id="extractResult" class="result"></div>
+    </div>
+
+    <script>
+        function testGetTables() {
+            const resultDiv = document.getElementById('tablesResult');
+            resultDiv.innerHTML = 'Загрузка...';
+            
+            fetch('/api/table_info')
+                .then(response => {
+                    console.log('Статус ответа:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Данные таблиц:', data);
+                    if (data.error) {
+                        resultDiv.innerHTML = `<strong>Ошибка:</strong> ${data.error}`;
+                    } else if (data.tables) {
+                        let html = `<strong>Найдено таблиц: ${data.tables.length}</strong><br><br>`;
+                        data.tables.forEach(table => {
+                            html += `${table.name} (${table.record_count} записей)<br>`;
+                        });
+                        resultDiv.innerHTML = html;
+                    } else {
+                        resultDiv.innerHTML = 'Неожиданный формат ответа';
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    resultDiv.innerHTML = `<strong>Ошибка:</strong> ${error.message}`;
+                });
+        }
+        
+        function testGetColumns() {
+            const tableName = document.getElementById('tableName').value;
+            const resultDiv = document.getElementById('columnsResult');
+            
+            if (!tableName) {
+                resultDiv.innerHTML = 'Введите название таблицы';
+                return;
+            }
+            
+            resultDiv.innerHTML = 'Загрузка...';
+            
+            fetch(`/api/get_table_columns/${tableName}`)
+                .then(response => {
+                    console.log('Статус ответа столбцов:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Данные столбцов:', data);
+                    if (data.error) {
+                        resultDiv.innerHTML = `<strong>Ошибка:</strong> ${data.error}`;
+                    } else if (data.columns) {
+                        let html = `<strong>Найдено столбцов: ${data.columns.length}</strong><br><br>`;
+                        data.columns.forEach(column => {
+                            html += `${column.name} (${column.type})<br>`;
+                        });
+                        resultDiv.innerHTML = html;
+                    } else {
+                        resultDiv.innerHTML = 'Неожиданный формат ответа';
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    resultDiv.innerHTML = `<strong>Ошибка:</strong> ${error.message}`;
+                });
+        }
+        
+        function testExtractNumbers() {
+            const text = document.getElementById('testText').value;
+            const mode = document.getElementById('testMode').value;
+            const resultDiv = document.getElementById('extractResult');
+            
+            if (!text) {
+                resultDiv.innerHTML = 'Введите текст для тестирования';
+                return;
+            }
+            
+            resultDiv.innerHTML = 'Загрузка...';
+            
+            fetch('/api/extract_numbers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text,
+                    mode: mode
+                })
+            })
+            .then(response => {
+                console.log('Статус ответа извлечения:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Данные извлечения:', data);
+                if (data.error) {
+                    resultDiv.innerHTML = `<strong>Ошибка:</strong> ${data.error}`;
+                } else {
+                    let html = `<strong>Исходный текст:</strong> ${data.original_text}<br><br>`;
+                    
+                    if (data.extracted_number !== undefined) {
+                        html += `<strong>Простое извлечение:</strong> ${data.extracted_number || 'не найдено'}<br>`;
+                    }
+                    if (data.cleaned_number !== undefined) {
+                        html += `<strong>Удаление префиксов S/F:</strong> ${data.cleaned_number || 'не найдено'}<br>`;
+                    }
+                    if (data.combined_number !== undefined) {
+                        html += `<strong>Комбинированный режим:</strong> ${data.combined_number || 'не найдено'}<br>`;
+                    }
+                    
+                    resultDiv.innerHTML = html;
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                resultDiv.innerHTML = `<strong>Ошибка:</strong> ${error.message}`;
+            });
+        }
+        
+        // Автоматически тестируем при загрузке страницы
+        window.onload = function() {
+            console.log('Страница загружена, тестируем API...');
+            testGetTables();
+        };
+    </script>
+</body>
+</html>
+

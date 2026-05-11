@@ -1,0 +1,81 @@
+[MASTER]
+# Используем Python 3.8+
+py-version=3.8
+
+# Исключаем директории
+ignore=backups,archive,venv,.venv,__pycache__,.pytest_cache
+
+# Формат вывода
+output-format=text
+reports=yes
+
+[MESSAGES CONTROL]
+# Отключаем некоторые проверки для упрощения
+disable=
+    missing-docstring,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-instance-attributes,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    import-outside-toplevel
+
+[FORMAT]
+# Максимальная длина строки
+max-line-length=100
+
+# Стиль отступов
+indent-string='    '
+indent-after-paren=4
+
+[BASIC]
+# Хорошие имена переменных
+good-names=i,j,k,ex,Run,_,id,df,conn,db,logger,app,config
+
+# Плохие имена переменных (не проверяем)
+bad-names=
+
+[DESIGN]
+# Максимальное количество аргументов
+max-args=10
+
+# Максимальное количество атрибутов
+max-attributes=15
+
+# Максимальное количество публичных методов
+max-public-methods=30
+
+# Максимальное количество локальных переменных
+max-locals=20
+
+# Максимальное количество веток
+max-branches=15
+
+# Максимальное количество операторов
+max-statements=100
+
+[IMPORTS]
+# Импорты должны быть в начале файла
+import-graph=
+
+[EXCEPTIONS]
+# Исключения, которые можно использовать
+overgeneral-exceptions=BaseException,Exception
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

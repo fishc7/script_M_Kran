@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}База данных - M_Kran Web Interface{% endblock %}
+
+{% block content %}
+<script>
+function getTableDisplayName(tableName) {
+    const tableNamesMapping = {
+        'Календарь': 'Календарь',
+        'Log_Piping_PTO': 'Список ISO от ПТО',
+        'Pipeline_Test_Package': 'Тест Пакеты',
+        'defects_NDT': 'Дефекты РК',
+        'folder_NDT_Report': 'Заключения pdf по РК',
+        'logs_lnk': 'Журнал НК от НГС Эксперт',
+        'pto_ndt_volume_register': 'Объем РК от ПТО(с изм)',
+        'weld_repair_log': 'Журнал Ремонтов',
+        'Daily_Staff_Allocation': 'Расстановка',
+        'NDT_Findings_Transmission_Register': 'Реестр переданных заключений НГС Эксперт(excel)',
+        'tks_registry': 'Реестр ТКС',
+        'wl_china': 'ЖСР Китайский',
+        'condition_weld': 'Статус стыка(послед)',
+        'pipeline_weld_joint_iso': 'Реестр ПРОЕКТНЫХ Стыков от М Кран',
+        'type_weld': 'Тип шва',
+        'wl_report_smr': 'Отчет СМР площадка',
+        'work_order_log_NDT': 'Заявки по НК от М Кран',
+        'основнаяНК': 'Основная НК'
+    };
+    return tableNamesMapping[tableName] || tableName;
+}
+</script>
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">
+                    <i class="fas fa-database me-2"></i>
+                    Управление базой данных
+                </h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">
+                    Просмотр и управление таблицами базы данных M_Kran_Kingesepp.db
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>
+                    Список таблиц
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if tables %}
+                    <div class="row">
+                        {% for table in tables %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-table me-2 text-primary"></i>
+                                        <span id="display-name-{{ table }}">{{ table }}</span>
+                                    </h6>
+                                    <p class="card-text text-muted small" id="original-name-{{ table }}">{{ table }}</p>
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="/table/{{ table }}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i>Просмотр
+                                        </a>
+                                        <a href="/export/{{ table }}" 
+                                           class="btn btn-outline-success btn-sm">
+                                            <i class="fas fa-download me-1"></i>Экспорт
+                                        </a>
+                                        <button class="btn btn-outline-info btn-sm" 
+                                                onclick="getTableInfo('{{ table }}')">
+                                            <i class="fas fa-info-circle me-1"></i>Инфо
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Таблицы не найдены или ошибка подключения к базе данных.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно с информацией о таблице -->
+<div class="modal fade" id="tableInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Информация о таблице
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="tableInfoContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Обновление названий таблиц при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    const tableElements = document.querySelectorAll('[id^="display-name-"]');
+    tableElements.forEach(element => {
+        const tableName = element.id.replace('display-name-', '');
+        const displayName = getTableDisplayName(tableName);
+        if (displayName !== tableName) {
+            element.textContent = displayName;
+            element.style.fontWeight = 'bold';
+        }
+    });
+});
+
+function getTableInfo(tableName) {
+    showLoading();
+    
+    fetch(`/api/table_info/${tableName}`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            
+            if (data.error) {
+                document.getElementById('tableInfoContent').innerHTML = 
+                    `<div class="alert alert-danger">${data.error}</div>`;
+            } else {
+                let columnsHtml = '';
+                data.columns.forEach(col => {
+                    columnsHtml += `
+                        <tr>
+                            <td><code>${col.name}</code></td>
+                            <td><span class="badge bg-secondary">${col.type}</span></td>
+                        </tr>
+                    `;
+                });
+                
+                document.getElementById('tableInfoContent').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Основная информация</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Название:</strong> ${data.table_name}</li>
+                                <li><strong>Записей:</strong> ${data.total_records.toLocaleString()}</li>
+                                <li><strong>Столбцов:</strong> ${data.columns.length}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Действия</h6>
+                            <div class="d-grid gap-2">
+                                <a href="/table/${data.table_name}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye me-1"></i>Просмотр данных
+                                </a>
+                                <a href="/export/${data.table_name}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-download me-1"></i>Экспорт в Excel
+                                </a>
+                                <a href="/export_table_structure/${data.table_name}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-file-excel me-1"></i>Экспорт структуры в Excel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Структура таблицы</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Столбец</th>
+                                    <th>Тип</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${columnsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            new bootstrap.Modal(document.getElementById('tableInfoModal')).show();
+        })
+        .catch(error => {
+            hideLoading();
+            document.getElementById('tableInfoContent').innerHTML = 
+                `<div class="alert alert-danger">Ошибка загрузки информации: ${error}</div>`;
+            new bootstrap.Modal(document.getElementById('tableInfoModal')).show();
+        });
+}
+</script>
+{% endblock %} 

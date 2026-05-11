@@ -1,0 +1,111 @@
+# Конфигурация проекта M_Kran для инструментов качества кода
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "m-kran"
+version = "5.0"
+description = "Система управления данными сварочных работ M_Kran"
+readme = "book_scripts/DOCUMENTATION.md"
+requires-python = ">=3.8"
+license = {text = "Proprietary"}
+
+# Инструменты форматирования и проверки кода
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # исключения
+  \.git
+  | \.venv
+  | venv
+  | __pycache__
+  | \.pytest_cache
+  | backups
+  | archive
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_glob = ["backups/**", "archive/**", "__pycache__/**"]
+
+[tool.pylint]
+# Базовая конфигурация pylint
+max-line-length = 100
+indent-string = "    "
+good-names = ["i", "j", "k", "ex", "Run", "_", "id", "df", "conn", "db", "logger"]
+disable = [
+    "C0103",  # invalid-name
+    "C0111",  # missing-docstring
+    "R0903",  # too-few-public-methods
+    "R0913",  # too-many-arguments
+    "W0613",  # unused-argument
+]
+
+[tool.pylint."messages control"]
+disable = [
+    "missing-docstring",
+    "too-few-public-methods",
+]
+
+[tool.flake8]
+max-line-length = 100
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+    "backups",
+    "archive",
+]
+ignore = [
+    "E203",  # whitespace before ':'
+    "E501",  # line too long (handled by black)
+    "W503",  # line break before binary operator
+]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = [
+    "backups/",
+    "archive/",
+    "__pycache__/",
+    ".venv/",
+    "venv/",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
