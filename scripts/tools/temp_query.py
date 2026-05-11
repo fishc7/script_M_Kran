@@ -1,8 +1,18 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import sqlite3
-conn = sqlite3.connect(r'D:\МК_Кран\script_M_Kran\database\BD_Kingisepp\M_Kran_Kingesepp.db')
+from pathlib import Path
+
+
+project_root = Path(__file__).resolve().parents[2]
+db_path = project_root / "database" / "BD_Kingisepp" / "M_Kran_Kingesepp.db"
+
+conn = sqlite3.connect(str(db_path))
 conn.row_factory = sqlite3.Row
 cur = conn.cursor()
-row = cur.execute("""
+row = cur.execute(
+    """
     SELECT 
         COUNT(DISTINCT CASE WHEN TRIM(COALESCE(wc.Результаты_АКТ_ВИК, '')) = 'Заказ отправлен' THEN wc.Номер_сварного_шва END) as заявлен_вик,
         COUNT(DISTINCT CASE WHEN TRIM(COALESCE(wc.Результаты_АКТ_ВИК, '')) = 'годен' THEN wc.Номер_сварного_шва END) as годен_вик,
@@ -17,5 +27,6 @@ row = cur.execute("""
       AND (wc.Клеймо_сварщика_корневой_слой = '2Z08' OR wc.Клеймо_сварщика_заполнение_облицовка = '2Z08')
       AND (wc.Метод_сварки_корневой_слой = 'SMAW' OR wc.Метод_сварки_заполнение_облицовка = 'SMAW')
       AND wc.Тип_соединения_российский_стандарт LIKE '%У17%'
-""").fetchone()
+"""
+).fetchone()
 print(dict(row))

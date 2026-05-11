@@ -259,6 +259,8 @@ def load_naks_to_db():
         
         # Путь к скрипту загрузки (проверяем оба возможных пути)
         possible_script_paths = [
+            os.path.join(calculated_project_root, 'scripts', 'tools', 'load_naks_to_db.py'),
+            os.path.join(calculated_project_root, 'load_naks_to_db.py'),
             os.path.join(calculated_project_root, 'archive', 'NAKS', 'НАКС_парсинг', '_naks_', 'load_naks_to_db.py'),
             os.path.join(calculated_project_root, 'NAKS', 'НАКС_парсинг', '_naks_', 'load_naks_to_db.py'),
         ]

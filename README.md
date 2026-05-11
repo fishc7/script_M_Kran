@@ -11,3 +11,11 @@
 - `scripts/cli/launch_visible.bat`
 - `scripts/cli/launch_vue.bat`
 - `scripts/cli/restore_interactive.bat`
+
+Вспомогательные Python-скрипты перенесены из корня в `scripts/tools/`:
+
+- `scripts/tools/check_syntax.py`
+- `scripts/tools/temp_query.py`
+- `scripts/tools/copy_table_to_correct_db.py`
+- `scripts/tools/restore_database.py`
+- `scripts/tools/load_naks_to_db.py`
