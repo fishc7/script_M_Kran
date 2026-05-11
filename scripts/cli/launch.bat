@@ -1,6 +1,8 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..\..") do set "PROJECT_ROOT=%%~fI"
+cd /d "%PROJECT_ROOT%"
 chcp 65001 >nul
 title M_Kran Launcher
 
@@ -30,7 +32,7 @@ goto bad
 :web
 echo.
 echo Starting Web Application...
-if not exist "web_launcher.py" (
+if not exist "%PROJECT_ROOT%\web_launcher.py" (
   echo ERROR: web_launcher.py not found
   goto pauseback
 )
@@ -38,17 +40,17 @@ set PYTHONIOENCODING=utf-8
 set PYTHONLEGACYWINDOWSSTDIO=1
 set "PY_EXE=%LocalAppData%\Programs\Python\Python314\python.exe"
 if exist "%PY_EXE%" (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%PY_EXE%' -ArgumentList 'web_launcher.py' -WorkingDirectory '%~dp0' -WindowStyle Hidden"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%PY_EXE%' -ArgumentList 'web_launcher.py' -WorkingDirectory '%PROJECT_ROOT%' -WindowStyle Hidden"
 ) else (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath 'python' -ArgumentList 'web_launcher.py' -WorkingDirectory '%~dp0' -WindowStyle Hidden"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath 'python' -ArgumentList 'web_launcher.py' -WorkingDirectory '%PROJECT_ROOT%' -WindowStyle Hidden"
 )
 goto done
 
 :vue
 echo.
 echo Starting Vue Application...
-if exist "launch_vue_simple.ps1" (
-  powershell -ExecutionPolicy Bypass -File "launch_vue_simple.ps1"
+if exist "%PROJECT_ROOT%\launch_vue_simple.ps1" (
+  powershell -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\launch_vue_simple.ps1"
 ) else (
   echo ERROR: launch_vue_simple.ps1 not found
 )
@@ -57,8 +59,8 @@ goto pauseback
 :db
 echo.
 echo Running DB check...
-if exist "scripts\diagnostics\check_db.py" (
-  python "scripts\diagnostics\check_db.py"
+if exist "%PROJECT_ROOT%\scripts\diagnostics\check_db.py" (
+  python "%PROJECT_ROOT%\scripts\diagnostics\check_db.py"
 ) else (
   echo WARNING: scripts\diagnostics\check_db.py not found
 )
@@ -67,8 +69,8 @@ goto pauseback
 :webdiag
 echo.
 echo Running web diagnostics...
-if exist "scripts\diagnostics\check_web_app.py" (
-  python "scripts\diagnostics\check_web_app.py"
+if exist "%PROJECT_ROOT%\scripts\diagnostics\check_web_app.py" (
+  python "%PROJECT_ROOT%\scripts\diagnostics\check_web_app.py"
 ) else (
   echo WARNING: scripts\diagnostics\check_web_app.py not found
 )
@@ -77,8 +79,8 @@ goto pauseback
 :stop
 echo.
 echo Stopping all servers...
-if exist "stop_servers.py" (
-  python "stop_servers.py"
+if exist "%PROJECT_ROOT%\stop_servers.py" (
+  python "%PROJECT_ROOT%\stop_servers.py"
 ) else (
   echo ERROR: stop_servers.py not found
 )

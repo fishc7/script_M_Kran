@@ -1,0 +1,22 @@
+backups/
+archive/
+logs/
+output/
+results/
+
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+*.log
+*.tmp
+*.temp
+*.dmp
+*.dump
+
+# Local databases and temporary DB artifacts
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
