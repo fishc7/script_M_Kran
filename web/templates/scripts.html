@@ -3,6 +3,20 @@
 {% block title %}ETL Процессы - M_Kran Web Interface{% endblock %}
 
 {% block content %}
+<style>
+/* Последняя нажатая кнопка «Запустить» на странице ETL */
+.etl-last-run-btn {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.9) !important;
+    border-color: #dc3545 !important;
+    color: #dc3545 !important;
+    font-weight: 600 !important;
+    position: relative;
+    z-index: 2;
+}
+.etl-last-run-btn i {
+    color: #dc3545 !important;
+}
+</style>
 <!-- Заголовок страницы -->
 <div class="row mb-2 mt-0">
     <div class="col-12">
@@ -151,7 +165,7 @@
                                             <i class="fas fa-file-excel text-success me-1"></i>
                                             <span class="fw-medium small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ script.description }}</span>
                                         </div>
-                                        <button class="btn btn-sm btn-outline-primary" style="flex-shrink: 0;" onclick="runScript('{{ script.path }}')">
+                                        <button type="button" class="btn btn-sm btn-outline-primary etl-run-btn" style="flex-shrink: 0;" onclick='runScript(this, {{ script.path|tojson }})'>
                                             <i class="fas fa-play me-1"></i>
                                             Запустить
                                         </button>
@@ -188,7 +202,7 @@
                                             <i class="fas fa-file-excel text-warning me-1"></i>
                                             <span class="fw-medium small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ script.description }}</span>
                                         </div>
-                                        <button class="btn btn-sm btn-outline-warning" style="flex-shrink: 0;" onclick="runScript('{{ script.path }}')">
+                                        <button type="button" class="btn btn-sm btn-outline-warning etl-run-btn" style="flex-shrink: 0;" onclick='runScript(this, {{ script.path|tojson }})'>
                                             <i class="fas fa-play me-1"></i>
                                             Запустить
                                         </button>
@@ -245,7 +259,7 @@
                                         <i class="fas fa-magic text-success me-1"></i>
                                         <span class="fw-medium small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ script.description }}</span>
                                     </div>
-                                    <button class="btn btn-sm btn-outline-success" style="flex-shrink: 0;" onclick="runScript('{{ script.path }}')">
+                                    <button type="button" class="btn btn-sm btn-outline-success etl-run-btn" style="flex-shrink: 0;" onclick='runScript(this, {{ script.path|tojson }})'>
                                         <i class="fas fa-play me-1"></i>
                                         Запустить
                                     </button>
@@ -280,13 +294,13 @@
                                     <span class="fw-medium small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Синхронизация pipeline ↔ wl_china</span>
                                 </div>
                                 <div class="btn-group" style="flex-shrink: 0;">
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="runSyncScript('html-preview')" title="Статистика - HTML отчет в новой вкладке">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary etl-run-btn" onclick="runSyncScript('html-preview', this)" title="Статистика - HTML отчет в новой вкладке">
                                         <i class="fas fa-chart-bar"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-info" onclick="runSyncScript('html-dry-run')" title="Просмотр - HTML отчет в новой вкладке">
+                                    <button type="button" class="btn btn-sm btn-outline-info etl-run-btn" onclick="runSyncScript('html-dry-run', this)" title="Просмотр - HTML отчет в новой вкладке">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-success" onclick="runSyncScript('full')" title="Запуск - полная синхронизация">
+                                    <button type="button" class="btn btn-sm btn-outline-success etl-run-btn" onclick="runSyncScript('full', this)" title="Запуск - полная синхронизация">
                                         <i class="fas fa-play"></i>
                                     </button>
                                 </div>
@@ -309,7 +323,7 @@
                                     <i class="fas fa-cut text-warning me-1"></i>
                                     <span class="fw-medium small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Удаление префиксов S/F</span>
                                 </div>
-                                <button class="btn btn-sm btn-outline-warning" style="flex-shrink: 0;" onclick="console.log('Кнопка нажата!'); showExtractNumbersModal();">
+                                <button type="button" class="btn btn-sm btn-outline-warning etl-run-btn" style="flex-shrink: 0;" onclick="setEtlLastRunHighlight(this); showExtractNumbersModal();">
                                     <i class="fas fa-play me-1"></i>
                                     Запустить
                                 </button>
@@ -318,7 +332,7 @@
                     </div>
                     <!-- Кнопка запуска всех дополнительных инструментов -->
                     <div class="mt-1">
-                        <button class="btn btn-warning btn-sm w-100" onclick="showExtractNumbersModal()">
+                        <button type="button" class="btn btn-warning btn-sm w-100" onclick="setEtlLastRunHighlight(this); showExtractNumbersModal();">
                             <i class="fas fa-tools me-1"></i>
                             Запуск всех инструментов
                         </button>
@@ -357,7 +371,7 @@
                                         <i class="fas fa-database text-info me-1"></i>
                                         <span class="fw-medium small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ script.description }}</span>
                                     </div>
-                                    <button class="btn btn-sm btn-outline-info" style="flex-shrink: 0;" onclick="runScript('{{ script.path }}')">
+                                    <button type="button" class="btn btn-sm btn-outline-info etl-run-btn" style="flex-shrink: 0;" onclick='runScript(this, {{ script.path|tojson }})'>
                                         <i class="fas fa-play me-1"></i>
                                         Запустить
                                     </button>
@@ -692,6 +706,25 @@ function closeETLGuide() {
     }
 }
 
+// Выделение последней нажатой кнопки «Запустить» у отдельного ETL-скрипта
+const ETL_LAST_RUN_CLASS = 'etl-last-run-btn';
+let etlLastRunButton = null;
+
+function clearEtlLastRunHighlight() {
+    if (etlLastRunButton) {
+        etlLastRunButton.classList.remove(ETL_LAST_RUN_CLASS);
+        etlLastRunButton = null;
+    }
+}
+
+function setEtlLastRunHighlight(button) {
+    clearEtlLastRunHighlight();
+    if (button && button.classList) {
+        button.classList.add(ETL_LAST_RUN_CLASS);
+        etlLastRunButton = button;
+    }
+}
+
 // Функция для запуска отдельного скрипта (использует версию из scripts.js)
 function runFullLogsLnkJournalUpdate() {
     var el = document.getElementById('btnFullLogsLnkUpdate');
@@ -703,6 +736,7 @@ function runFullLogsLnkJournalUpdate() {
     if (!confirm('Запустить полное обновление журнала НК?\n\n1) Журнал НГС\n2) Журнал АКС')) {
         return;
     }
+    clearEtlLastRunHighlight();
     showLoading();
     showNotification('Запуск полного обновления журнала НК...', 'info');
     fetch('/run_script', {
@@ -728,8 +762,26 @@ function runFullLogsLnkJournalUpdate() {
     });
 }
 
-function runScript(scriptPath) {
+function runScript(scriptButtonOrPath, scriptPathMaybe) {
+    let scriptButton = null;
+    let scriptPath;
+    if (
+        scriptButtonOrPath &&
+        typeof scriptButtonOrPath === 'object' &&
+        scriptButtonOrPath.nodeType === 1 &&
+        typeof scriptPathMaybe === 'string'
+    ) {
+        scriptButton = scriptButtonOrPath;
+        scriptPath = scriptPathMaybe;
+    } else {
+        scriptPath = scriptButtonOrPath;
+    }
+    if (!scriptPath) {
+        showNotification('Не указан путь к скрипту', 'error');
+        return;
+    }
     if (confirm('Запустить скрипт ' + scriptPath + '?')) {
+        setEtlLastRunHighlight(scriptButton);
         // Показать индикатор загрузки
         showLoading();
         
@@ -769,6 +821,7 @@ function runScript(scriptPath) {
 // Функция для запуска всех скриптов этапа ETL
 function runETLStage(stage) {
     if (confirm('Запустить все скрипты этапа ' + stage + '?')) {
+        clearEtlLastRunHighlight();
         showLoading();
         showNotification('Запуск всех скриптов этапа ' + stage + '...', 'info');
         
@@ -808,6 +861,7 @@ function runETLStage(stage) {
 // Функция для запуска полного ETL pipeline
 function runETLPipeline() {
     if (confirm('Запустить полный ETL pipeline (Extract -> Transform -> Load)?')) {
+        clearEtlLastRunHighlight();
         showLoading();
         showNotification('Запуск полного ETL pipeline...', 'info');
         
@@ -995,6 +1049,7 @@ function clearScriptLogs() {
 
 // Функции для запуска всех скриптов по категориям
 function runAllDailyScripts() {
+    clearEtlLastRunHighlight();
     showLoading();
     showNotification('Запуск всех ежедневных скриптов...', 'info');
     showProgressSection();
@@ -1095,6 +1150,7 @@ function runAllDailyScripts() {
 }
 
 function runAllPeriodicScripts() {
+    clearEtlLastRunHighlight();
     showLoading();
     showNotification('Запуск всех периодических скриптов...', 'info');
     showProgressSection();
@@ -1649,8 +1705,8 @@ function findLatestHtmlFile() {
         });
 }
 
-// Функция для запуска скрипта синхронизации
-function runSyncScript(mode) {
+// Функция для запуска скрипта синхронизации (button — для подсветки «последний запуск», как у runScript)
+function runSyncScript(mode, button) {
     console.log('runSyncScript вызвана с режимом:', mode);
     // Указываем реальный путь к скрипту внутри проекта
     const scriptPath = 'scripts/maintenance/sync_pipeline_wl_china.py';
@@ -1678,6 +1734,7 @@ function runSyncScript(mode) {
     }
     
     if (confirm(confirmMessage)) {
+        setEtlLastRunHighlight(button || null);
         showLoading();
         showProgressSection();
         

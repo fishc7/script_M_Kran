@@ -1730,12 +1730,14 @@ def get_etl_scripts():
     logger.info("Starting get_etl_scripts()")
     etl_scripts = {}
     
-    # Папки со скриптами
+    # Папки со скриптами (плоский список .py в каждой; подпапки maintenance/database — для Transform)
     scripts_dirs = [
         app.config['SCRIPTS_DIR'],
         os.path.join(app.config['SCRIPTS_DIR'], 'data_loaders'),
         os.path.join(app.config['SCRIPTS_DIR'], 'data_cleaners'),
         os.path.join(app.config['SCRIPTS_DIR'], 'utilities'),
+        os.path.join(app.config['SCRIPTS_DIR'], 'maintenance'),
+        os.path.join(app.config['SCRIPTS_DIR'], 'database'),
         app.config['PROJECT_ROOT']  # Добавляем корневую папку проекта
     ]
     
