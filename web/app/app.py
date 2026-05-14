@@ -40,6 +40,8 @@ import io
 from io import BytesIO
 import re
 import unicodedata
+import mimetypes
+from urllib.parse import unquote, quote
 # Добавляем путь к текущей директории для импорта script_runner
 import sys
 import os
@@ -8582,16 +8584,128 @@ def vue_database():
 
 
 
+def _project_root_for_env() -> Path:
+    """Корень репозитория (рядом с web/, scripts/)."""
+    return Path(__file__).resolve().parent.parent.parent
+
+
+def _try_load_dotenv() -> None:
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    env_file = _project_root_for_env() / '.env'
+    if env_file.is_file():
+        load_dotenv(env_file, override=False)
+
+
+def _parse_s3_uri(uri: str):
+    """Разбор s3://bucket/ключ/к/объекту → (bucket, key) или (None, None)."""
+    u = (uri or '').strip()
+    if not u.lower().startswith('s3://'):
+        return None, None
+    rest = u[5:]
+    if '/' not in rest:
+        return rest, ''
+    bucket, _, key = rest.partition('/')
+    if not bucket:
+        return None, None
+    return bucket, key
+
+
+@app.route('/api/s3_object')
+def s3_object_proxy():
+    """Отдаёт объект из S3 по URI (таблица folder_NDT_Report, поле full_path)."""
+    _try_load_dotenv()
+    raw = request.args.get('uri') or request.args.get('path') or ''
+    uri = unquote(raw).strip()
+    if not uri.lower().startswith('s3://'):
+        return jsonify({'error': 'Укажите параметр uri вида s3://bucket/ключ/к/файлу'}), 400
+    bucket, key = _parse_s3_uri(uri)
+    if not bucket or not key:
+        return jsonify({'error': 'Некорректный S3 URI'}), 400
+
+    endpoint = os.environ.get('S3_ENDPOINT_URL') or os.environ.get('AWS_ENDPOINT_URL')
+    if not endpoint:
+        logger.error('S3: не задан S3_ENDPOINT_URL или AWS_ENDPOINT_URL')
+        return jsonify({'error': 'S3 не настроен: задайте S3_ENDPOINT_URL и ключи в .env'}), 503
+
+    try:
+        import boto3
+        from botocore.exceptions import BotoCoreError, ClientError
+    except ImportError:
+        return jsonify({'error': 'Для S3 установите boto3: pip install boto3'}), 503
+
+    region = os.environ.get('AWS_DEFAULT_REGION') or os.environ.get('S3_REGION')
+    s3_kwargs: dict = {
+        'service_name': 's3',
+        'endpoint_url': endpoint.rstrip('/'),
+    }
+    if region:
+        s3_kwargs['region_name'] = region
+    client = boto3.client(**s3_kwargs)
+    try:
+        obj = client.get_object(Bucket=bucket, Key=key)
+    except ClientError as e:
+        code = e.response.get('Error', {}).get('Code', '')
+        if code in ('NoSuchKey', '404', 'NotFound'):
+            return jsonify({'error': f'Объект не найден в S3: {uri}'}), 404
+        logger.exception('S3 get_object: %s', e)
+        return jsonify({'error': str(e)}), 502
+    except BotoCoreError as e:
+        logger.exception('S3: %s', e)
+        return jsonify({'error': str(e)}), 502
+
+    body = obj['Body']
+    content_type = (
+        obj.get('ContentType')
+        or mimetypes.guess_type(key)[0]
+        or 'application/octet-stream'
+    )
+    base_name = os.path.basename(key) or 'download'
+    cd = "inline; filename*=UTF-8''" + quote(base_name, safe='')
+
+    def generate():
+        try:
+            while True:
+                chunk = body.read(8 * 1024 * 1024)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            body.close()
+
+    from flask import Response
+
+    return Response(
+        generate(),
+        content_type=content_type,
+        headers={'Content-Disposition': cd},
+    )
+
+
 @app.route('/api/open_file')
 def open_file():
     """API для открытия файлов через системное приложение"""
     try:
-        file_path = request.args.get('path', '')
+        file_path = unquote(request.args.get('path', ''))
         
-        if not file_path:
+        if not file_path.strip():
             return jsonify({'error': 'Путь к файлу не указан'}), 400
+
+        # s3:// нельзя пропускать через os.path.normpath на Windows: получится s3:\… и «файл не найден»
+        if file_path.strip().lower().startswith('s3://'):
+            base = request.url_root.rstrip('/')
+            viewer_url = f'{base}/api/s3_object?uri={quote(file_path, safe="")}'
+            logger.info('S3 URI → просмотр через браузер: %s', file_path)
+            return jsonify({
+                'success': True,
+                'message': 'Открываю файл из облака в браузере',
+                'viewer_url': viewer_url,
+                'file_path': file_path,
+            })
         
-        # Нормализуем путь для корректного сравнения
+        # Нормализуем путь для корректного сравнения (только локальные пути)
         file_path = os.path.normpath(file_path)
         
         logger.info(f'Попытка открытия файла: {file_path}')
@@ -8769,10 +8883,13 @@ def open_file():
 def open_file_location():
     """API для открытия папки с файлом в проводнике"""
     try:
-        file_path = request.args.get('path', '')
+        file_path = unquote(request.args.get('path', ''))
         
-        if not file_path:
+        if not file_path.strip():
             return jsonify({'error': 'Путь к файлу не указан'}), 400
+
+        if file_path.strip().lower().startswith('s3://'):
+            return jsonify({'error': 'Для объектов S3 открытие папки в проводнике недоступно'}), 400
         
         # Нормализуем путь для корректного сравнения
         file_path = os.path.normpath(file_path)

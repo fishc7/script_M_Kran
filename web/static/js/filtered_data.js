@@ -54,7 +54,11 @@ function openFile(filePath) {
         
         // Создаем ссылку для скачивания файла
         const link = document.createElement('a');
-        link.href = `/api/open_file?path=${encodeURIComponent(normalizedPath)}`;
+        if (/^s3:\/\//i.test(normalizedPath)) {
+            link.href = `/api/s3_object?uri=${encodeURIComponent(normalizedPath)}`;
+        } else {
+            link.href = `/api/open_file?path=${encodeURIComponent(normalizedPath)}`;
+        }
         link.download = normalizedPath.split('/').pop();
         link.target = '_blank';
         

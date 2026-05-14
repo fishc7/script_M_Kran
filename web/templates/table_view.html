@@ -1940,7 +1940,10 @@ function openFile(filePath) {
         fetch(`/api/open_file?path=${encodeURIComponent(filePath)}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
+                if (data.success && data.viewer_url) {
+                    window.open(data.viewer_url, '_blank');
+                    showNotification(`✅ ${data.message}`);
+                } else if (data.success) {
                     showNotification(`✅ ${data.message}`);
                 } else {
                     showNotification(`❌ ${data.error}`);
