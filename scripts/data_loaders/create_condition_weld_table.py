@@ -167,6 +167,7 @@ def create_condition_weld_table():
                 id,
                 Чертеж,
                 "_Номер_сварного_шва_без_S_F_",
+                Линия,
                 РК,
                 Статус_РК,
                 Дата_контроля_РК,
@@ -179,7 +180,7 @@ def create_condition_weld_table():
                 "Дата_заявки" AS "Дата_заявки_РК",
                 app_row_id AS "app_row_id_РК",
                 ROW_NUMBER() OVER (
-                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_" 
+                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_", Линия
                     ORDER BY 
                         /* 1) Приоритет статуса "Заказ отправлен" без даты */
                         CASE 
@@ -198,7 +199,7 @@ def create_condition_weld_table():
                         id DESC
                 ) as rn,
                 COUNT(*) OVER (
-                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_"
+                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_", Линия
                 ) as total_rt_records
             FROM logs_lnk 
             WHERE Заявленны_виды_контроля LIKE {rt_like_pattern}
@@ -208,6 +209,7 @@ def create_condition_weld_table():
                 id,
                 Чертеж,
                 "_Номер_сварного_шва_без_S_F_",
+                Линия,
                 ВИК,
                 Статус_ВИК,
                 Дата_ВИК,
@@ -221,7 +223,7 @@ def create_condition_weld_table():
                 "Дата_заявки" AS "Дата_заявки_ВИК",
                 app_row_id AS "app_row_id_ВИК",
                 ROW_NUMBER() OVER (
-                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_" 
+                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_", Линия
                     ORDER BY 
                         /* 1) Основной критерий: последнее состояние по app_row_id */
                         app_row_id DESC,
@@ -229,7 +231,7 @@ def create_condition_weld_table():
                         DATE(Дата_контроля_ВИК) DESC
                 ) as rn,
                 COUNT(*) OVER (
-                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_"
+                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_", Линия
                 ) as total_vt_records
             FROM logs_lnk 
             WHERE Заявленны_виды_контроля LIKE {vt_like_pattern}
@@ -277,6 +279,7 @@ def create_condition_weld_table():
                 id AS ID_RT,
                 Чертеж,
                 "_Номер_сварного_шва_без_S_F_" AS Номер_шва,
+                Линия AS "Линия_LNK",
                 РК,
                 Статус_РК,
                 Дата_контроля_РК,
@@ -290,12 +293,13 @@ def create_condition_weld_table():
                 Источник
             FROM RankedRecordsRT 
             WHERE rn = 1
-        ) rt ON pwji."ISO" = rt.Чертеж AND pwji."стык" = rt.Номер_шва
+        ) rt ON pwji."ISO" = rt.Чертеж AND pwji."стык" = rt.Номер_шва AND pwji."Линия" = rt."Линия_LNK"
         LEFT JOIN (
             SELECT 
                 id AS ID_VT,
                 Чертеж,
                 "_Номер_сварного_шва_без_S_F_" AS Номер_шва,
+                Линия AS "Линия_LNK",
                 ВИК,
                 Статус_ВИК,
                 Дата_ВИК,
@@ -310,8 +314,8 @@ def create_condition_weld_table():
                 Источник
             FROM RankedRecordsVT 
             WHERE rn = 1
-        ) vt ON pwji."ISO" = vt.Чертеж AND pwji."стык" = vt.Номер_шва
-        LEFT JOIN wl_china wc ON pwji."ISO" = wc."Номер_чертежа" AND pwji."стык" = wc."_Номер_сварного_шва_без_S_F_"
+        ) vt ON pwji."ISO" = vt.Чертеж AND pwji."стык" = vt.Номер_шва AND pwji."Линия" = vt."Линия_LNK"
+        LEFT JOIN wl_china wc ON pwji."ISO" = wc."Номер_чертежа" AND pwji."стык" = wc."_Номер_сварного_шва_без_S_F_" AND pwji."Линия" = wc."N_Линии"
         ORDER BY pwji."ISO", pwji."стык"
         """
         

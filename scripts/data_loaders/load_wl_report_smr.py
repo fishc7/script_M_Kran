@@ -29,6 +29,7 @@ except ImportError:
 """
 
 import os
+import sys
 import pandas as pd
 from datetime import datetime
 import glob
@@ -50,6 +51,29 @@ except ImportError:
         sys.path.insert(0, utilities_dir)
     
     from path_utils import get_database_path, get_script_log_path, validate_path
+
+# Фильтр строк по ФИО/значениям в столбцах Q и P
+_loaders_dir = os.path.dirname(os.path.abspath(__file__))
+if _loaders_dir not in sys.path:
+    sys.path.insert(0, _loaders_dir)
+
+
+def _load_q_filter_module():
+    import importlib.util
+
+    module_name = "wl_report_smr_q_filter"
+    module_path = os.path.join(_loaders_dir, f"{module_name}.py")
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Не удалось загрузить модуль фильтрации: {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_q_filter_module = _load_q_filter_module()
+apply_pre_normalization_filters = _q_filter_module.apply_pre_normalization_filters
 
 # Настройка логирования
 def setup_logging():
@@ -503,6 +527,10 @@ def load_excel_to_db():
         # Читаем лист "ЖСР" из Excel
         df = pd.read_excel(latest_file, sheet_name="ЖСР")
         logger.info(f"Прочитано строк из Excel: {len(df)}")
+        
+        _project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        logger.info("Очистка опечаток в столбцах O, P и Q (до нормализации столбцов)...")
+        df = apply_pre_normalization_filters(df, project_root=_project_root, logger=logger)
         
         # Очищаем имена столбцов
         original_columns = df.columns.tolist()

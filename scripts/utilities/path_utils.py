@@ -77,6 +77,14 @@ def get_excel_paths():
     
     return paths
 
+def get_wl_report_smr_fio_removal_path():
+    """
+    Справочник исключений при загрузке wl_report_smr (до нормализации столбцов).
+    config/wl_report_smr_удалить_опечатки.xlsx:
+      столбец A — ФИО для очистки Q; столбец B — значения для очистки O и P.
+    """
+    return os.path.join(get_project_root(), "config", "wl_report_smr_удалить_опечатки.xlsx")
+
 def validate_path(path, description=""):
     """
     Проверяет существование пути и возвращает информацию о нем
