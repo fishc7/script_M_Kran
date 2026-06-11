@@ -85,6 +85,15 @@ def get_wl_report_smr_fio_removal_path():
     """
     return os.path.join(get_project_root(), "config", "wl_report_smr_удалить_опечатки.xlsx")
 
+
+def get_logs_lnk_chertezh_overrides_path():
+    """
+    Справочник подстановки «Чертеж» по app_row_id при загрузке журнала НГС.
+    config/logs_lnk_чертеж_по_app_row_id.xlsx:
+      столбец A — app_row_id; столбец B — целевое значение «Чертеж».
+    """
+    return os.path.join(get_project_root(), "config", "logs_lnk_чертеж_по_app_row_id.xlsx")
+
 def validate_path(path, description=""):
     """
     Проверяет существование пути и возвращает информацию о нем

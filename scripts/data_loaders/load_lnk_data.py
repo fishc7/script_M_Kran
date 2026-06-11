@@ -67,6 +67,7 @@ import time
 
 # Импортируем функции нормализации
 try:
+    from .logs_lnk_chertezh_overrides import apply_chertezh_overrides_by_app_row_id
     from .normalization_functions import normalize_vik_status, normalize_rk_status
 except ImportError:
     # Если не работает относительный импорт, используем абсолютный
@@ -81,6 +82,7 @@ except ImportError:
     if scripts_dir not in sys.path:
         sys.path.insert(0, scripts_dir)
 
+    from logs_lnk_chertezh_overrides import apply_chertezh_overrides_by_app_row_id
     from normalization_functions import normalize_vik_status, normalize_rk_status
 
 # Константы
@@ -304,6 +306,10 @@ def preprocess_lnk_data(df):
         print(f"   ✅ Найдено {mask_ing0604.sum()} записей с 087-ING-0604, обновлён столбец Чертеж")
     else:
         print("   ℹ️ Значение 087-ING-0604 не найдено в столбце Линия")
+
+    # 9. Подстановка «Чертеж» по app_row_id из config/logs_lnk_чертеж_по_app_row_id.xlsx
+    override_count = apply_chertezh_overrides_by_app_row_id(df, norm_key=_norm_app_row_id_key)
+    changes_count += override_count
 
     print(f"🎯 Предварительная обработка завершена. Всего изменений: {changes_count}")
     return df

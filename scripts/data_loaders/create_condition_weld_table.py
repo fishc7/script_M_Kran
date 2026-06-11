@@ -52,6 +52,120 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+SHM_ISO_CONDITION = 'pwji."ISO" LIKE \'%-SHM-%\''
+
+LNK_JOIN_SQL = """
+    normalize_iso(pwji."ISO") = normalize_iso({alias}.Чертеж)
+    AND pwji."стык" = {alias}.Номер_шва
+    AND (
+        ({shm_iso})
+        AND normalize_line_number(pwji."Линия") = normalize_line_number({alias}."Линия_LNK")
+        AND {alias}.rn = 1
+        OR NOT ({shm_iso})
+        AND {alias}.rn_joint = 1
+    )
+"""
+
+WL_CHINA_JOIN_SQL = f"""
+    normalize_iso(pwji."ISO") = normalize_iso(wc."Номер_чертежа")
+    AND pwji."стык" = wc."_Номер_сварного_шва_без_S_F_"
+    AND (
+        ({SHM_ISO_CONDITION})
+        AND normalize_line_number(pwji."Линия") = normalize_line_number(wc."N_Линии")
+        OR NOT ({SHM_ISO_CONDITION})
+    )
+"""
+
+RT_RANK_ORDER_SQL = """
+                        CASE 
+                            WHEN Статус_РК = 'Заказ отправлен' AND Дата_контроля_РК IS NULL THEN 1
+                            WHEN Дата_контроля_РК IS NOT NULL THEN 2
+                            ELSE 3
+                        END,
+                        DATE(Дата_контроля_РК) DESC,
+                        CASE 
+                            WHEN Статус_РК = 'Н/П' THEN 1
+                            ELSE 2
+                        END,
+                        id DESC
+"""
+
+POSTGRES_NORMALIZE_LINE_SQL = """
+CREATE OR REPLACE FUNCTION normalize_line_number(line text)
+RETURNS text AS $$
+DECLARE
+    last_sep int;
+    prefix text;
+    last_part text;
+BEGIN
+    IF line IS NULL THEN
+        RETURN NULL;
+    END IF;
+    last_sep := length(line) - position('-' in reverse(line)) + 1;
+    IF last_sep <= 1 OR last_sep > length(line) THEN
+        RETURN line;
+    END IF;
+    prefix := substring(line from 1 for last_sep - 1);
+    last_part := substring(line from last_sep + 1);
+    IF last_part ~ '^[0-9]+$' THEN
+        RETURN prefix || '-' || (last_part::bigint)::text;
+    END IF;
+    RETURN line;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+"""
+
+POSTGRES_NORMALIZE_ISO_SQL = """
+CREATE OR REPLACE FUNCTION normalize_iso(iso text)
+RETURNS text AS $$
+BEGIN
+    IF iso IS NULL THEN
+        RETURN NULL;
+    END IF;
+    RETURN REPLACE(REPLACE(iso, 'М', 'M'), 'м', 'm');
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+"""
+
+
+def normalize_iso(iso):
+    """
+    Нормализует опечатки в номере чертежа: кириллическая М -> латинская M (TKМ -> TKM).
+    """
+    if iso is None:
+        return None
+    return str(iso).strip().replace('М', 'M').replace('м', 'm')
+
+
+def normalize_line_number(line):
+    """
+    Нормализует опечатки в номере линии: 087-SSB-00600 -> 087-SSB-600.
+    Приводит к int только последний числовой сегмент после '-'.
+    """
+    if line is None:
+        return None
+    text = str(line).strip()
+    if not text:
+        return text
+    parts = text.split('-')
+    if parts and parts[-1].isdigit():
+        parts[-1] = str(int(parts[-1]))
+    return '-'.join(parts)
+
+
+def register_sql_normalizers(conn):
+    """Регистрирует normalize_iso и normalize_line_number для SQL JOIN."""
+    if USE_POSTGRESQL:
+        cursor = conn.cursor()
+        cursor.execute(POSTGRES_NORMALIZE_LINE_SQL)
+        cursor.execute(POSTGRES_NORMALIZE_ISO_SQL)
+        conn.commit()
+        cursor.close()
+    else:
+        conn.create_function('normalize_iso', 1, normalize_iso)
+        conn.create_function('normalize_line_number', 1, normalize_line_number)
+
+
 def check_required_tables(cursor):
     """
     Проверяет наличие необходимых таблиц для создания condition_weld
@@ -104,6 +218,7 @@ def create_condition_weld_table():
     try:
         # Подключение к базе данных
         conn = get_database_connection()
+        register_sql_normalizers(conn)
         # Для PostgreSQL используем RealDictCursor для получения результатов в виде словаря
         if USE_POSTGRESQL and RealDictCursor:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -159,6 +274,9 @@ def create_condition_weld_table():
         else:
             rt_like_pattern = "'%RT%'"
             vt_like_pattern = "'%VT%'"
+
+        rt_lnk_join = LNK_JOIN_SQL.format(alias='rt', shm_iso=SHM_ISO_CONDITION)
+        vt_lnk_join = LNK_JOIN_SQL.format(alias='vt', shm_iso=SHM_ISO_CONDITION)
         
         create_table_sql = f"""
         CREATE TABLE condition_weld AS
@@ -180,26 +298,15 @@ def create_condition_weld_table():
                 "Дата_заявки" AS "Дата_заявки_РК",
                 app_row_id AS "app_row_id_РК",
                 ROW_NUMBER() OVER (
-                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_", Линия
-                    ORDER BY 
-                        /* 1) Приоритет статуса "Заказ отправлен" без даты */
-                        CASE 
-                            WHEN Статус_РК = 'Заказ отправлен' AND Дата_контроля_РК IS NULL THEN 1
-                            WHEN Дата_контроля_РК IS NOT NULL THEN 2
-                            ELSE 3
-                        END,
-                        /* 2) Затем самая новая дата контроля */
-                        DATE(Дата_контроля_РК) DESC,
-                        /* 3) При равенстве дат — приоритет остальных статусов */
-                        CASE 
-                            WHEN Статус_РК = 'Н/П' THEN 1
-                            ELSE 2
-                        END,
-                        /* 4) Финальный стабилизатор */
-                        id DESC
+                    PARTITION BY normalize_iso(Чертеж), "_Номер_сварного_шва_без_S_F_", Линия
+                    ORDER BY {RT_RANK_ORDER_SQL}
                 ) as rn,
+                ROW_NUMBER() OVER (
+                    PARTITION BY normalize_iso(Чертеж), "_Номер_сварного_шва_без_S_F_"
+                    ORDER BY {RT_RANK_ORDER_SQL}
+                ) as rn_joint,
                 COUNT(*) OVER (
-                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_", Линия
+                    PARTITION BY normalize_iso(Чертеж), "_Номер_сварного_шва_без_S_F_", Линия
                 ) as total_rt_records
             FROM logs_lnk 
             WHERE Заявленны_виды_контроля LIKE {rt_like_pattern}
@@ -223,15 +330,19 @@ def create_condition_weld_table():
                 "Дата_заявки" AS "Дата_заявки_ВИК",
                 app_row_id AS "app_row_id_ВИК",
                 ROW_NUMBER() OVER (
-                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_", Линия
+                    PARTITION BY normalize_iso(Чертеж), "_Номер_сварного_шва_без_S_F_", Линия
                     ORDER BY 
-                        /* 1) Основной критерий: последнее состояние по app_row_id */
                         app_row_id DESC,
-                        /* 2) Вторичный критерий: дата контроля ВИК (самая новая) */
                         DATE(Дата_контроля_ВИК) DESC
                 ) as rn,
+                ROW_NUMBER() OVER (
+                    PARTITION BY normalize_iso(Чертеж), "_Номер_сварного_шва_без_S_F_"
+                    ORDER BY 
+                        app_row_id DESC,
+                        DATE(Дата_контроля_ВИК) DESC
+                ) as rn_joint,
                 COUNT(*) OVER (
-                    PARTITION BY Чертеж, "_Номер_сварного_шва_без_S_F_", Линия
+                    PARTITION BY normalize_iso(Чертеж), "_Номер_сварного_шва_без_S_F_", Линия
                 ) as total_vt_records
             FROM logs_lnk 
             WHERE Заявленны_виды_контроля LIKE {vt_like_pattern}
@@ -290,10 +401,11 @@ def create_condition_weld_table():
                 "№_заявки_РК",
                 "Дата_заявки_РК",
                 "app_row_id_РК",
-                Источник
-            FROM RankedRecordsRT 
-            WHERE rn = 1
-        ) rt ON pwji."ISO" = rt.Чертеж AND pwji."стык" = rt.Номер_шва AND pwji."Линия" = rt."Линия_LNK"
+                Источник,
+                rn,
+                rn_joint
+            FROM RankedRecordsRT
+        ) rt ON {rt_lnk_join}
         LEFT JOIN (
             SELECT 
                 id AS ID_VT,
@@ -311,11 +423,12 @@ def create_condition_weld_table():
                 "№_заявки_ВИК",
                 "Дата_заявки_ВИК",
                 "app_row_id_ВИК",
-                Источник
-            FROM RankedRecordsVT 
-            WHERE rn = 1
-        ) vt ON pwji."ISO" = vt.Чертеж AND pwji."стык" = vt.Номер_шва AND pwji."Линия" = vt."Линия_LNK"
-        LEFT JOIN wl_china wc ON pwji."ISO" = wc."Номер_чертежа" AND pwji."стык" = wc."_Номер_сварного_шва_без_S_F_" AND pwji."Линия" = wc."N_Линии"
+                Источник,
+                rn,
+                rn_joint
+            FROM RankedRecordsVT
+        ) vt ON {vt_lnk_join}
+        LEFT JOIN wl_china wc ON {WL_CHINA_JOIN_SQL}
         ORDER BY pwji."ISO", pwji."стык"
         """
         
@@ -363,6 +476,25 @@ def create_condition_weld_table():
         """
         cursor.execute(update_code_sql)
         logger.info("✅ Столбец Код_удаления обработан")
+
+        # В LNK только ВИК, а заключение РК есть в wl_china — подставляем поля РК из WL
+        logger.info("🔧 Заполнение Статус_РК из wl_china (ВИК в LNK, РК в WL)...")
+        update_rk_from_wl_sql = """
+        UPDATE condition_weld
+        SET
+            "Статус_РК" = "Результаты_Заключения_РК",
+            "Дата_контроля_РК" = "Дата_Заключения_РК",
+            "РК" = "Заключение_РК_N",
+            "Источник_РК" = 'WL'
+        WHERE "ID_RT" IS NULL
+          AND "ID_VT" IS NOT NULL
+          AND "Результаты_Заключения_РК" IS NOT NULL
+          AND TRIM("Результаты_Заключения_РК") != ''
+          AND ("Статус_РК" IS NULL OR TRIM("Статус_РК") = '')
+        """
+        cursor.execute(update_rk_from_wl_sql)
+        wl_rk_filled = cursor.rowcount
+        logger.info(f"✅ Заполнено записей РК из wl_china: {wl_rk_filled}")
         
         # Сохраняем изменения
         conn.commit()

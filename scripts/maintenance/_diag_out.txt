@@ -1,0 +1,35 @@
+﻿=== Category counts (may overlap) ===
+A_no_lnk_any: 96
+B_lnk_vt_only: 38
+C_rt_line_mismatch: 22
+D_rt_styk_mismatch: 66
+E_rt_iso_only: 63
+
+=== A: no logs_lnk - can we find RT by relaxed keys? ===
+  RT exists ISO+styk (any line): 18
+  RT exists ISO+line (any styk): 40
+  RT exists for ISO only: 59
+  No logs_lnk for ISO at all: 13
+
+=== Line mismatch examples (A, RT by ISO+styk) ===
+python : Traceback (most recent call last):
+C:\Users\Andrey\AppData\Local\Temp\ps-script-8b93da0f-31b8-4764-a954-d81bd7a52d52.ps1:105 знак:1
++ python "d:\МК_Кран\script_M_Kran\scripts\maintenance\_diag_condition_ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "d:\╠╩_╩Ёрэ\script_M_Kran\scripts\maintenance\_diag_condition_weld2.py", line 255, in <module>
+    main()
+    ~~~~^^
+  File "d:\╠╩_╩Ёрэ\script_M_Kran\scripts\maintenance\_diag_condition_weld2.py", line 150, in main
+    c.execute(f"""
+    ~~~~~~~~~^^^^^
+        SELECT cw."ISO", cw."╦шэш " AS line_pwji, cw."ёЄ√ъ",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<17 lines>...
+        LIMIT 15
+        ^^^^^^^^
+    """)
+    ^^^^
+sqlite3.OperationalError: near "JOIN": syntax error
