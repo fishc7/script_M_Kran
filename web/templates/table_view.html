@@ -49,6 +49,23 @@
         font-size: 0.8rem;
     }
 
+    .btn-row-delete {
+        padding: 0.1rem 0.25rem;
+        line-height: 1;
+        border: none;
+        background: transparent;
+        color: #dc3545;
+    }
+
+    .btn-row-delete:hover {
+        color: #bb2d3b;
+        background: rgba(220, 53, 69, 0.08);
+    }
+
+    .btn-row-delete i {
+        font-size: 0.65rem;
+    }
+
     /* Компактные кнопки с минимальными отступами */
     .d-flex.gap-1 .btn {
         margin-right: 0.25rem;
@@ -649,6 +666,9 @@
         <br><small class="text-white-50" style="font-size: 0.75rem;">
             <i class="fas fa-edit me-1"></i>
             Поставьте галочку для редактирования полей ФИО и Примечание
+            <br>
+            <i class="fas fa-trash me-1"></i>
+            Кнопка удаления — в последнем столбце справа
         </small>
         {% endif %}
     </p>
@@ -864,6 +884,9 @@
                     <div class="column-resizer" data-column="{{ column }}"></div>
                 </th>
                 {% endfor %}
+                {% if table_name == 'слов_клейм_факт' %}
+                <th data-column="actions" style="width: 36px; text-align: center; padding: 0.5rem 0.25rem;"></th>
+                {% endif %}
             </tr>
             <tr class="column-filter-row">
                 <td class="filter-container" data-column="checkbox">
@@ -897,11 +920,14 @@
                     </div>
                 </td>
                 {% endfor %}
+                {% if table_name == 'слов_клейм_факт' %}
+                <td class="filter-container" data-column="actions"></td>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
             {% for record in records %}
-            <tr data-record-id="{{ record.id if record.id else '' }}">
+            <tr data-record-id="{{ record.get('id', record.get('app_row_id', '')) }}">
                 <td class="checkbox-cell" data-column="checkbox">
                     <input type="checkbox" class="record-checkbox" value="{{ record.get('app_row_id', record.get('id', '')) }}"
                            data-record-id="{{ record.get('app_row_id', record.get('id', '')) }}">
@@ -969,6 +995,18 @@
                     {% endif %}
                 </td>
                 {% endfor %}
+                {% if table_name == 'слов_клейм_факт' %}
+                <td data-column="actions" class="text-center" style="padding: 0.25rem;">
+                    {% set row_id = record.get('id', record.get('app_row_id', '')) %}
+                    {% if row_id %}
+                    <button class="btn btn-row-delete"
+                            onclick="deleteSlovKleimoFactRecord({{ row_id }})"
+                            title="Удалить запись">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    {% endif %}
+                </td>
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>
@@ -4706,6 +4744,50 @@ async function transferSelectedToWeldRepairLog() {
 // Функция для открытия модального окна редактирования записи (дубликат удален, используется версия выше)
 
 // Функция для сохранения изменений в журнале ремонтов (дубликат удален, используется версия выше)
+
+// Функция для удаления записи из слов_клейм_факт
+async function deleteSlovKleimoFactRecord(recordId) {
+    if (!recordId) {
+        alert('Не удалось определить ID записи');
+        return;
+    }
+
+    if (!confirm('Удалить эту запись из словаря клейм?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/slov_kleimo_fact/${recordId}`, {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            const row = document.querySelector(`tr[data-record-id="${recordId}"]`);
+            if (row) {
+                row.remove();
+            } else {
+                window.location.reload();
+            }
+
+            if (typeof showNotification === 'function') {
+                showNotification('✅ Запись успешно удалена', 'success');
+            } else {
+                alert('Запись успешно удалена');
+            }
+        } else {
+            const message = result.message || 'неизвестная ошибка';
+            if (typeof showNotification === 'function') {
+                showNotification('❌ Ошибка удаления: ' + message, 'error');
+            } else {
+                alert('Ошибка удаления: ' + message);
+            }
+        }
+    } catch (error) {
+        console.error('Ошибка удаления записи слов_клейм_факт:', error);
+        alert('Ошибка удаления: ' + error.message);
+    }
+}
 
 // Функция для редактирования записи в слов_клейм_факт
 function editSlovKleimoFactRecord(recordId) {

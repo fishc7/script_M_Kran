@@ -9763,6 +9763,31 @@ def api_update_slov_kleimo_fact_record(record_id):
         logger.error(f'Ошибка обновления записи слов_клейм_факт {record_id}: {e}')
         return jsonify({'success': False, 'message': str(e)})
 
+@app.route('/api/slov_kleimo_fact/<int:record_id>', methods=['DELETE'])
+def api_delete_slov_kleimo_fact_record(record_id):
+    """API для удаления записи из таблицы слов_клейм_факт"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'success': False, 'message': 'Ошибка подключения к базе данных'})
+
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM слов_клейм_факт WHERE id = ?', (record_id,))
+        if cursor.fetchone()[0] == 0:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Запись не найдена'})
+
+        cursor.execute('DELETE FROM слов_клейм_факт WHERE id = ?', (record_id,))
+        conn.commit()
+        conn.close()
+
+        logger.info(f'Удалена запись слов_клейм_факт с ID: {record_id}')
+        return jsonify({'success': True, 'message': 'Запись успешно удалена'})
+
+    except Exception as e:
+        logger.error(f'Ошибка удаления записи слов_клейм_факт {record_id}: {e}')
+        return jsonify({'success': False, 'message': str(e)})
+
 # API endpoints для таблицы ФИО_свар
 @app.route('/api/fio_svar', methods=['GET'])
 def api_get_fio_svar_list():
