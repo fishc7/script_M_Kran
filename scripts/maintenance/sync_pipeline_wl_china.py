@@ -7,6 +7,7 @@
 Проверяет соответствие записей по:
 - ISO (pipeline_weld_joint_iso) и Номер_чертежа (wl_china)
 - стык (pipeline_weld_joint_iso) и _Номер_сварного_шва_без_S_F_ (wl_china)
+- Линия (pipeline_weld_joint_iso) и N_Линии (wl_china)
 
 Если записи не найдены, вставляет недостающие данные из wl_china в pipeline_weld_joint_iso
 """
@@ -73,6 +74,37 @@ def setup_logging():
 
 logger = setup_logging()
 
+
+def normalize_line_number(line):
+    """Нормализация номера линии (087-SSB-00600 -> 087-SSB-600), как в condition_weld."""
+    if line is None:
+        return None
+    text = str(line).strip()
+    if not text:
+        return text
+    parts = text.split('-')
+    if parts and parts[-1].isdigit():
+        parts[-1] = str(int(parts[-1]))
+    return '-'.join(parts)
+
+
+# Сопоставление wl_china (w) ↔ pipeline_weld_joint_iso (p)
+WL_PWJI_MATCH_SQL = """
+    w.Номер_чертежа = p.ISO
+    AND w._Номер_сварного_шва_без_S_F_ = p.стык
+    AND normalize_line_number(COALESCE(w.N_Линии, '')) = normalize_line_number(COALESCE(p.Линия, ''))
+"""
+
+WL_CHINA_KEY_FILTERS_SQL = """
+    w.Номер_чертежа IS NOT NULL
+    AND w._Номер_сварного_шва_без_S_F_ IS NOT NULL
+    AND w.N_Линии IS NOT NULL
+    AND w.Номер_чертежа != ''
+    AND w._Номер_сварного_шва_без_S_F_ != ''
+    AND TRIM(w.N_Линии) != ''
+"""
+
+
 class PipelineWLChinaSync:
     """Класс для синхронизации данных между pipeline_weld_joint_iso и wl_china"""
     
@@ -92,6 +124,7 @@ class PipelineWLChinaSync:
         """Подключение к базе данных"""
         try:
             self.conn = get_database_connection()
+            self.conn.create_function('normalize_line_number', 1, normalize_line_number)
             self.cursor = self.conn.cursor()
             logger.info("[OK] Подключение к базе данных успешно")
             return True
@@ -138,9 +171,10 @@ class PipelineWLChinaSync:
                 w.Номер_листа,
                 w.блок_N
             FROM pipeline_weld_joint_iso p
-            INNER JOIN wl_china w ON 
-                p.ISO = w.Номер_чертежа 
+            INNER JOIN wl_china w ON
+                p.ISO = w.Номер_чертежа
                 AND p.стык = w._Номер_сварного_шва_без_S_F_
+                AND normalize_line_number(COALESCE(p.Линия, '')) = normalize_line_number(COALESCE(w.N_Линии, ''))
             """
             
             self.cursor.execute(query)
@@ -153,7 +187,7 @@ class PipelineWLChinaSync:
             if matched_records:
                 logger.info("[EXAMPLES] Примеры найденных соответствий:")
                 for i, record in enumerate(matched_records[:5], 1):
-                    logger.info(f"   {i}. ISO: {record[1]}, стык: {record[2]}")
+                    logger.info(f"   {i}. ISO: {record[1]}, стык: {record[2]}, линия: {record[3]}")
             
             return matched_records
             
@@ -168,7 +202,7 @@ class PipelineWLChinaSync:
             logger.info("[CHECK] Поиск недостающих записей...")
             
             # Запрос для поиска записей в wl_china, которых нет в pipeline_weld_joint_iso
-            query = """
+            query = f"""
             SELECT 
                 w.id,
                 w.Номер_чертежа,
@@ -177,14 +211,9 @@ class PipelineWLChinaSync:
                 w.Номер_листа,
                 w.блок_N
             FROM wl_china w
-            LEFT JOIN pipeline_weld_joint_iso p ON 
-                w.Номер_чертежа = p.ISO 
-                AND w._Номер_сварного_шва_без_S_F_ = p.стык
+            LEFT JOIN pipeline_weld_joint_iso p ON {WL_PWJI_MATCH_SQL}
             WHERE p.id IS NULL
-            AND w.Номер_чертежа IS NOT NULL 
-            AND w._Номер_сварного_шва_без_S_F_ IS NOT NULL
-            AND w.Номер_чертежа != ''
-            AND w._Номер_сварного_шва_без_S_F_ != ''
+            AND {WL_CHINA_KEY_FILTERS_SQL}
             """
             
             self.cursor.execute(query)
@@ -197,7 +226,7 @@ class PipelineWLChinaSync:
             if missing_records:
                 logger.info("[EXAMPLES] Примеры недостающих записей:")
                 for i, record in enumerate(missing_records[:5], 1):
-                    logger.info(f"   {i}. ISO: {record[1]}, стык: {record[2]}")
+                    logger.info(f"   {i}. ISO: {record[1]}, стык: {record[2]}, линия: {record[3]}")
                 
                 # Группируем по титулам для статистики
                 titul_stats = {}
@@ -282,7 +311,7 @@ class PipelineWLChinaSync:
             # Показываем примеры вставленных записей
             logger.info("[EXAMPLES] Примеры вставленных записей:")
             for i, record in enumerate(insert_data[:5], 1):
-                logger.info(f"   {i}. Титул: {record[0]}, ISO: {record[1]}, стык: {record[5]}")
+                logger.info(f"   {i}. Титул: {record[0]}, ISO: {record[1]}, линия: {record[2]}, стык: {record[5]}")
             
         except Exception as e:
             logger.error(f"[ERROR] Ошибка вставки записей: {e}")
@@ -300,17 +329,12 @@ class PipelineWLChinaSync:
             new_total = self.cursor.fetchone()[0]
             
             # Проверяем, что все записи из wl_china теперь есть в pipeline_weld_joint_iso
-            query = """
+            query = f"""
             SELECT COUNT(*)
             FROM wl_china w
-            LEFT JOIN pipeline_weld_joint_iso p ON 
-                w.Номер_чертежа = p.ISO 
-                AND w._Номер_сварного_шва_без_S_F_ = p.стык
+            LEFT JOIN pipeline_weld_joint_iso p ON {WL_PWJI_MATCH_SQL}
             WHERE p.id IS NULL
-            AND w.Номер_чертежа IS NOT NULL 
-            AND w._Номер_сварного_шва_без_S_F_ IS NOT NULL
-            AND w.Номер_чертежа != ''
-            AND w._Номер_сварного_шва_без_S_F_ != ''
+            AND {WL_CHINA_KEY_FILTERS_SQL}
             """
             
             self.cursor.execute(query)

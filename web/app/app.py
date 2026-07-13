@@ -3906,7 +3906,8 @@ def api_joint_manager_export_current():
 @app.route('/api/joint_manager/import', methods=['POST'])
 def api_joint_manager_import():
     """Импорт Excel/CSV для массового обновления pipeline_weld_joint_iso.
-    Матч по id, либо по паре (ISO, стык), если id нет.
+    Матч по id, либо по тройке (ISO, стык, Линия), если id нет.
+    Если столбца Линия нет — fallback на пару (ISO, стык).
     Обновляются только переданные поля.
     """
     try:
@@ -3935,9 +3936,21 @@ def api_joint_manager_import():
         has_id = any(c.lower() == 'id' for c in df.columns)
         has_iso = any(c.lower() in ['iso', 'чертеж', 'чертеж_iso'] for c in df.columns)
         has_joint = any(c.strip().lower() in ['стык', 'joint', 'joint_number', '№ стыка', 'номер стыка'] for c in df.columns)
+        has_line = any(c.strip().lower() in ['линия', 'n_линии', 'line', 'n_line'] for c in df.columns)
 
         if not has_id and not (has_iso and has_joint):
-            return jsonify({'success': False, 'message': 'Нет ключей для сопоставления (id или ISO+стык)'}), 400
+            return jsonify({'success': False, 'message': 'Нет ключей для сопоставления (id или ISO+стык[+Линия])'}), 400
+
+        def normalize_import_line(val):
+            if val is None or (isinstance(val, float) and pd.isna(val)):
+                return ''
+            text = str(val).strip()
+            if not text:
+                return text
+            parts = text.split('-')
+            if parts and parts[-1].isdigit():
+                parts[-1] = str(int(parts[-1]))
+            return '-'.join(parts)
 
         # Разрешенные к обновлению поля (если есть в файле)
         updatable_candidates = [
@@ -3988,15 +4001,27 @@ def api_joint_manager_import():
         updated = 0
         created = 0
 
-        # Подготовим индексы для ускорения сопоставления по ISO+стык при необходимости
+        # Подготовим индексы для ускорения сопоставления по ISO+стык[+Линия] при необходимости
         if not has_id and has_iso and has_joint:
-            cursor.execute('SELECT id, "ISO", "стык" FROM pipeline_weld_joint_iso')
-            existing = cursor.fetchall()
-            # Ключ: (ISO, стык)
-            iso_joint_to_id = {}
-            for row in existing:
-                row_id, iso_val, joint_val = row
-                iso_joint_to_id[(str(iso_val).strip(), str(joint_val).strip())] = row_id
+            if has_line:
+                cursor.execute('SELECT id, "ISO", "стык", "Линия" FROM pipeline_weld_joint_iso')
+                existing = cursor.fetchall()
+                iso_joint_to_id = {}
+                for row in existing:
+                    row_id, iso_val, joint_val, line_val = row
+                    key = (
+                        str(iso_val).strip(),
+                        str(joint_val).strip(),
+                        normalize_import_line(line_val),
+                    )
+                    iso_joint_to_id[key] = row_id
+            else:
+                cursor.execute('SELECT id, "ISO", "стык" FROM pipeline_weld_joint_iso')
+                existing = cursor.fetchall()
+                iso_joint_to_id = {}
+                for row in existing:
+                    row_id, iso_val, joint_val = row
+                    iso_joint_to_id[(str(iso_val).strip(), str(joint_val).strip())] = row_id
 
         for _, r in df.iterrows():
             processed += 1
@@ -4016,17 +4041,30 @@ def api_joint_manager_import():
             if record_id is None and has_iso and has_joint:
                 iso_col = next((c for c in df.columns if c.lower() in ['iso', 'чертеж', 'чертеж_iso']), None)
                 joint_col = next((c for c in df.columns if c.strip().lower() in ['стык', 'joint', 'joint_number', '№ стыка', 'номер стыка']), None)
+                line_col = next((c for c in df.columns if c.strip().lower() in ['линия', 'n_линии', 'line', 'n_line']), None) if has_line else None
                 iso_val = str(r.get(iso_col) or '').strip()
                 joint_val = str(r.get(joint_col) or '').strip()
+                line_val = normalize_import_line(r.get(line_col)) if line_col else ''
                 if iso_val and joint_val:
                     if has_id:
-                        # если и id был в файле, но невалидный — пробуем найти по ISO+стык на лету
-                        cursor.execute('SELECT id FROM pipeline_weld_joint_iso WHERE "ISO" = ? AND "стык" = ?', (iso_val, joint_val))
+                        if has_line and line_val:
+                            cursor.execute(
+                                'SELECT id FROM pipeline_weld_joint_iso WHERE "ISO" = ? AND "стык" = ? AND "Линия" = ?',
+                                (iso_val, joint_val, line_val),
+                            )
+                        else:
+                            cursor.execute(
+                                'SELECT id FROM pipeline_weld_joint_iso WHERE "ISO" = ? AND "стык" = ?',
+                                (iso_val, joint_val),
+                            )
                         found = cursor.fetchone()
                         if found:
                             record_id = int(found[0])
                     else:
-                        record_id = iso_joint_to_id.get((iso_val, joint_val))
+                        if has_line and line_val:
+                            record_id = iso_joint_to_id.get((iso_val, joint_val, line_val))
+                        else:
+                            record_id = iso_joint_to_id.get((iso_val, joint_val))
                 
                 # Если запись не найдена, создаем новую
                 if not record_id:
