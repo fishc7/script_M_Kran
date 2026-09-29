@@ -43,43 +43,24 @@
                 </h5>
                 <div class="row mb-3">
                     <div class="col-12">
-                        <button type="button" class="btn btn-dark btn-lg w-100 py-2" id="btnFullLogsLnkUpdate"
+                        <button type="button" class="btn btn-dark btn-lg w-100 py-2" id="btnStartupEtl"
+                                data-script-path="{{ startup_etl_script|e }}"
+                                onclick="runStartupEtl()">
+                            <i class="fas fa-play me-2"></i>
+                            Обновить данные
+                        </button>
+                        <small class="text-muted d-block text-center mt-1">Журналы НК, WELDLOG, очистка префиксов, синхронизация и итоговые таблицы — по очереди</small>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <button type="button" class="btn btn-outline-dark btn-lg w-100 py-2" id="btnFullLogsLnkUpdate"
                                 data-script-path="{{ full_logs_lnk_update_script|e }}"
                                 onclick="runFullLogsLnkJournalUpdate()">
                             <i class="fas fa-book me-2"></i>
                             Полное обновление журнала НК
                         </button>
                         <small class="text-muted d-block text-center mt-1">Сначала журнал НГС, затем журнал АКС</small>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-3">
-                        <button class="btn btn-success btn-md w-100 mb-1" onclick="runAllDailyScripts()">
-                            <i class="fas fa-calendar-day me-1"></i>
-                            Все ежедневные скрипты
-                        </button>
-                        <small class="text-muted">Приоритет ≤ 10</small>
-                    </div>
-                    <div class="col-md-3">
-                        <button class="btn btn-warning btn-md w-100 mb-1" onclick="runAllPeriodicScripts()">
-                            <i class="fas fa-calendar-week me-1"></i>
-                            Все периодические скрипты
-                        </button>
-                        <small class="text-muted">Приоритет > 10</small>
-                    </div>
-                    <div class="col-md-3">
-                        <button class="btn btn-primary btn-md w-100 mb-1" onclick="runETLPipeline()">
-                            <i class="fas fa-exchange-alt me-1"></i>
-                            Полный ETL Pipeline
-                        </button>
-                        <small class="text-muted">Extract → Transform → Load</small>
-                    </div>
-                    <div class="col-md-3">
-                        <button class="btn btn-info btn-md w-100 mb-1" onclick="showScriptStatus()">
-                            <i class="fas fa-chart-line me-1"></i>
-                            Статус выполнения
-                        </button>
-                        <small class="text-muted">Просмотр статуса</small>
                     </div>
                 </div>
             </div>
@@ -726,6 +707,42 @@ function setEtlLastRunHighlight(button) {
 }
 
 // Функция для запуска отдельного скрипта (использует версию из scripts.js)
+function runStartupEtl() {
+    var el = document.getElementById('btnStartupEtl');
+    var path = el ? el.getAttribute('data-script-path') : '';
+    if (!path) {
+        showNotification('Не задан путь к обновлению данных', 'error');
+        return;
+    }
+    if (!confirm('Запустить обновление данных?\n\n1. Журнал НК НГС\n2. Журнал НК АКС\n3. Данные китайских подрядчиков\n4. Очистка префиксов S/F в журнале и в WELDLOG\n5. Синхронизация pipeline и wl_china\n6. Очистка и синхронизация журнала ремонта\n7. Обновление wl_china из основнаяНК\n8. Последнее состояние сварных швов\n9. Таблица «сварено сварщиком»\n\nЕсли шаг не выполнится, следующие не запустятся.')) {
+        return;
+    }
+    clearEtlLastRunHighlight();
+    showLoading();
+    showNotification('Запуск обновления данных...', 'info');
+    fetch('/run_script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script_path: path })
+    })
+    .then(function (response) { return response.json(); })
+    .then(function (data) {
+        hideLoading();
+        if (data.success) {
+            showNotification('Скрипт запущен. ID: ' + (data.script_id || '—'), 'success');
+            if (data.script_id) {
+                monitorScriptStatus(data.script_id);
+            }
+        } else {
+            showNotification('Ошибка: ' + (data.message || 'неизвестно'), 'error');
+        }
+    })
+    .catch(function (error) {
+        hideLoading();
+        showNotification('Ошибка запроса: ' + error, 'error');
+    });
+}
+
 function runFullLogsLnkJournalUpdate() {
     var el = document.getElementById('btnFullLogsLnkUpdate');
     var path = el ? el.getAttribute('data-script-path') : '';

@@ -1287,9 +1287,16 @@ class SvarennoSvarshchikomCreator:
 
             """
 
-            self.cursor.execute(update_lsttp_sql)
-
-            self.conn.commit()
+            self.cursor.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='LstTp_12460'"
+            )
+            if self.cursor.fetchone() is None:
+                logger.warning(
+                    "⚠️ Таблица LstTp_12460 не найдена, столбцы 'No TEST-PACK' и '№ ИЧ' оставлены пустыми"
+                )
+            else:
+                self.cursor.execute(update_lsttp_sql)
+                self.conn.commit()
 
 
 

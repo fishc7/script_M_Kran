@@ -1034,13 +1034,16 @@ def load_excel_data(conn, df=None):
             print(traceback.format_exc())
             # Не прерываем выполнение, так как основная загрузка wl_china прошла успешно
 
+        return True
     except Exception as e:
         print(f"Ошибка при загрузке данных: {e}")
         import traceback
         print("Полный стек ошибки:")
         print(traceback.format_exc())
+        return False
 
 def main():
+    ok = False
     try:
         # Подключаемся к базе данных используя утилиту
         print("Подключение к базе данных...")
@@ -1052,19 +1055,22 @@ def main():
 
         # Загружаем данные, передавая DataFrame
         if df is not None:
-            load_excel_data(conn, df)
+            ok = bool(load_excel_data(conn, df))
         else:
             print("Ошибка: не удалось создать таблицу")
+            ok = False
 
     except Exception as e:
         print(f"Произошла ошибка: {str(e)}")
         import traceback
         print("Полный стек ошибки:")
         print(traceback.format_exc())
+        ok = False
     finally:
         if 'conn' in locals():
             conn.close()
             print("\nСоединение с базой данных закрыто")
+    return ok
 
 if __name__ == "__main__":
     main()

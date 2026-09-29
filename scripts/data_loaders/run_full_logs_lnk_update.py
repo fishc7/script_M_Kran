@@ -2,7 +2,8 @@
 """
 Полное обновление таблицы logs_lnk: по очереди
   1) load_lnk_data — журнал НГС (источник NGS);
-  2) load_lnk_nk_aks — догрузка из LOG_М-КРАН_RT_ТТ (источник AKS).
+  2) load_lnk_nk_aks — догрузка из LOG_М-КРАН_RT_ТТ (источник AKS);
+  3) нормализация Статус_ВИК / Статус_РК (после АКС, иначе «годен» не попадает в карточки).
 
 Запуск из веб-интерфейса (кнопка «Полное обновление журнала») или: python run_full_logs_lnk_update.py
 Если шаг 2 (АКС) не находит каталог/файл — в логе скрипта будет [ERR]; НГС при этом уже обновлён.
@@ -35,10 +36,12 @@ print = safe_print
 try:
     from .load_lnk_data import load_data, _resolve_db_path
     from .load_lnk_nk_aks import load_nk_aks_into_logs_lnk
+    from .normalization_functions import normalize_vik_status, normalize_rk_status
     from .utilities.logs_lnk_etl_lock import LogsLnkEtlLock
 except ImportError:
     from load_lnk_data import load_data, _resolve_db_path
     from load_lnk_nk_aks import load_nk_aks_into_logs_lnk
+    from normalization_functions import normalize_vik_status, normalize_rk_status
     _util_dir = os.path.normpath(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'utilities')
     )
@@ -83,15 +86,23 @@ def run_full_logs_lnk_update():
     ok = False
     with LogsLnkEtlLock(db_path):
         print('=' * 60)
-        print('ШАГ 1/2: Журнал НГС (load_lnk_data.py)')
+        print('ШАГ 1/3: Журнал НГС (load_lnk_data.py)')
         print('=' * 60)
         load_data(use_etl_lock=False)
         print('=' * 60)
-        print('ШАГ 2/2: Догрузка АКС (load_lnk_nk_aks.py)')
+        print('ШАГ 2/3: Догрузка АКС (load_lnk_nk_aks.py)')
         print('=' * 60)
         ok = load_nk_aks_into_logs_lnk()
         if not ok:
             print('[WARN] Догрузка АКС не выполнена (нет файла или ошибка). Данные НГС уже обновлены.')
+        # АКС пишет статусы как в Excel («годен»); без повторной нормализации карточки их не считают.
+        print('=' * 60)
+        print('ШАГ 3/3: Нормализация статусов ВИК/РК')
+        print('=' * 60)
+        success_vik = normalize_vik_status()
+        success_rk = normalize_rk_status()
+        if not success_vik or not success_rk:
+            print('[WARN] Нормализация статусов завершилась с ошибкой — проверьте логи.')
         print('=' * 60)
         print('Полное обновление журнала logs_lnk завершено')
         print('=' * 60)

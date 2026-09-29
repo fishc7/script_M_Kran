@@ -283,6 +283,29 @@ def create_pipeline_weld_joint_iso_table():
         logger.error(traceback.format_exc())
         return False
 
+def correct_ccc_iso_prefix(df):
+    """
+    Опечатка в номере чертежа: CCC-NAG-... -> GCC-NAG-...
+    Выполняется до проверки дубликатов, чтобы повторная загрузка Excel
+    обновляла уже исправленные строки, а не вставляла их заново.
+    """
+    if 'ISO' not in df.columns:
+        logger.warning("⚠️ Столбец ISO не найден, замена CCC-NAG пропущена")
+        return 0
+
+    iso_text = df['ISO'].map(lambda value: '' if pd.isna(value) else str(value).strip())
+    mask = iso_text.str.startswith('CCC-NAG-')
+    count = int(mask.sum())
+    if count == 0:
+        logger.info("ℹ️ Опечаток CCC-NAG в столбце ISO не найдено")
+        return 0
+
+    df.loc[mask, 'ISO'] = iso_text.loc[mask].str.replace(r'^CCC-NAG-', 'GCC-NAG-', n=1, regex=True)
+    samples = df.loc[mask, 'ISO'].drop_duplicates().head(5).tolist()
+    logger.info(f"✅ ISO CCC-NAG заменён на GCC-NAG: {count} строк. Примеры: {samples}")
+    return count
+
+
 def load_excel_data_to_db(force_load=False):
     """
     Загружает данные из Excel файла в таблицу pipeline_weld_joint_iso
@@ -305,6 +328,7 @@ def load_excel_data_to_db(force_load=False):
         
         logger.info(f"Прочитано {len(df)} строк из Excel файла")
         logger.info(f"Столбцы в Excel: {df.columns.tolist()}")
+        correct_ccc_iso_prefix(df)
         
         # Показываем первые несколько строк для отладки
         logger.info("📋 Первые 3 строки из Excel:")

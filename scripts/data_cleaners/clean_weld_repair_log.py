@@ -10,14 +10,17 @@ from pathlib import Path
 
 def get_db_connection():
     """Создает соединение с базой данных"""
-    project_root = Path(__file__).parent
-    db_path = project_root / 'BD_Kingisepp' / 'M_Kran_Kingesepp.db'
-    
-    conn = sqlite3.connect(db_path)
+    if os.environ.get('PROJECT_ROOT'):
+        project_root = Path(os.environ['PROJECT_ROOT'])
+    else:
+        project_root = Path(__file__).resolve().parent.parent.parent
+    db_path = project_root / 'database' / 'BD_Kingisepp' / 'M_Kran_Kingesepp.db'
+
+    conn = sqlite3.connect(str(db_path), timeout=30.0)
     conn.row_factory = sqlite3.Row
     return conn
 
-def clean_weld_repair_log():
+def clean_weld_repair_log(assume_yes=False):
     """Очищает weld_repair_log от неправильных записей"""
     
     conn = get_db_connection()
@@ -30,7 +33,8 @@ def clean_weld_repair_log():
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='weld_repair_log'")
     if not cursor.fetchone():
         print("❌ Таблица weld_repair_log не существует")
-        return
+        conn.close()
+        return False
     
     # Получаем все записи из weld_repair_log
     cursor.execute("SELECT app_row_id FROM weld_repair_log")
@@ -113,9 +117,13 @@ def clean_weld_repair_log():
         for reason, count in reasons.items():
             print(f"  {reason}: {count}")
         
-        # Запрашиваем подтверждение
+        # Запрашиваем подтверждение. Из веб-цепочки вопрос не задаём.
         print(f"\n⚠️ ВНИМАНИЕ: Будет удалено {len(records_to_delete)} записей из weld_repair_log!")
-        response = input("Продолжить удаление? (y/N): ")
+        if assume_yes:
+            print("Удаление без вопроса в консоли.")
+            response = 'y'
+        else:
+            response = input("Продолжить удаление? (y/N): ")
         
         if response.lower() == 'y':
             # Удаляем неправильные записи
@@ -151,12 +159,20 @@ def clean_weld_repair_log():
                 print(f"⚠️ Все еще есть расхождение: {remaining_count} vs {expected_count}")
         else:
             print("❌ Удаление отменено")
+            conn.close()
+            return False
     else:
         print("✅ Все записи в weld_repair_log корректны")
     
     conn.close()
     print("\n" + "=" * 80)
     print("✅ ОЧИСТКА ЗАВЕРШЕНА")
+    return True
+
+
+def run_script():
+    """Запуск из веб-интерфейса: удаление без вопроса в консоли."""
+    return clean_weld_repair_log(assume_yes=True)
 
 if __name__ == "__main__":
     clean_weld_repair_log()

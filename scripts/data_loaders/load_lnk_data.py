@@ -363,7 +363,7 @@ def load_data(use_etl_lock: bool = True):
     actual_db_path = _resolve_db_path()
     if not actual_db_path:
         print("❌ Ошибка: не удалось определить путь к базе данных.")
-        return
+        return False
     print("Путь к базе данных:", actual_db_path)
     print(f"Путь к папке с Excel-файлами: {excel_dir}")
 
@@ -383,8 +383,9 @@ def load_data(use_etl_lock: bool = True):
             etl_lock_obj.acquire()
         except TimeoutError as e:
             print(f"❌ {e}")
-            return
+            return False
 
+    load_ok = False
     try:
         db_dir = os.path.dirname(actual_db_path)
         if db_dir and not os.path.exists(db_dir):
@@ -982,6 +983,7 @@ def load_data(use_etl_lock: bool = True):
             print("\n" + "="*60)
             print("ВСЕ СКРИПТЫ ЗАВЕРШЕНЫ")
             print("="*60)
+            load_ok = True
 
         else:
             print("\n❌ Не найдено файлов с датой в имени!")
@@ -1000,9 +1002,11 @@ def load_data(use_etl_lock: bool = True):
         print("   4. Установите xlwings для работы с .xlsb файлами: pip install xlwings")
         if 'conn' in locals():
             conn.close()
+        return False
     finally:
         if etl_lock_obj is not None:
             etl_lock_obj.release()
+    return load_ok
 
 def main():
     """Основная функция"""

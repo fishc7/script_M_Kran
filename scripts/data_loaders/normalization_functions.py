@@ -26,22 +26,53 @@ except ImportError:
         sys.path.insert(0, core_dir)
     from core.database import get_database_connection, DatabaseConnection
 
+
+# Канонические статусы. Ключи сравниваются через casefold (годен / Годен / ГОДЕН).
+STATUS_MAPPING = {
+    'Годен': 'Годен',
+    'Н/П': 'Н/П',
+    'Ремонт': 'Не годен',
+    'Пересвет': 'Пересвет',
+    'Не соответствует': 'Не соответствует',
+    'Не годен': 'Не годен',
+    'Вырезать': 'Не годен',
+    'Вырез': 'Не годен',
+    'Заявлен': 'Заказ отправлен',
+}
+
+
+def _status_mapping_casefold():
+    """Маппинг без учёта регистра кириллицы."""
+    return {key.casefold(): value for key, value in STATUS_MAPPING.items()}
+
+
+def _apply_status_mapping(cursor, column_name, unique_statuses):
+    """Приводит значения столбца к каноническому виду (регистронезависимо)."""
+    mapping = _status_mapping_casefold()
+    total_normalized = 0
+    for old_status in unique_statuses:
+        if not isinstance(old_status, str):
+            continue
+        key = old_status.strip().casefold()
+        new_status = mapping.get(key)
+        if not new_status or old_status == new_status:
+            continue
+        cursor.execute(
+            f'UPDATE logs_lnk SET "{column_name}" = ? WHERE "{column_name}" = ?',
+            (new_status, old_status),
+        )
+        updated_count = cursor.rowcount
+        if updated_count > 0:
+            print(f"✅ '{old_status}' → '{new_status}': {updated_count} записей")
+            total_normalized += updated_count
+    return total_normalized
+
+
 def normalize_vik_status():
     """
     Нормализация столбцов Статус_ВИК и ВИК в таблице logs_lnk
     """
     print("🚀 Начинаем нормализацию столбцов Статус_ВИК и ВИК")
-    
-    # Маппинг для приведения статусов к общему виду
-    status_mapping = {
-        'Годен': 'Годен',
-        'Н/П': 'Н/П',
-        'Ремонт': 'Не годен',
-        'Пересвет': 'Пересвет',
-        'Не соответствует': 'Не соответствует',
-        'Вырезать': 'Не годен',
-        'Заявлен': 'Заказ отправлен'
-    }
     
     conn = get_database_connection()
     if not conn:
@@ -112,19 +143,7 @@ def normalize_vik_status():
         unique_statuses = [row[0] for row in cursor.fetchall()]
         print(f"📊 Уникальные значения Статус_ВИК: {unique_statuses}")
         
-        # Применяем маппинг
-        total_normalized = 0
-        for old_status, new_status in status_mapping.items():
-            if old_status != new_status:  # Обновляем только если значения отличаются
-                cursor.execute("""
-                    UPDATE logs_lnk 
-                    SET "Статус_ВИК" = ? 
-                    WHERE "Статус_ВИК" = ?
-                """, (new_status, old_status))
-                updated_count = cursor.rowcount
-                if updated_count > 0:
-                    print(f"✅ '{old_status}' → '{new_status}': {updated_count} записей")
-                    total_normalized += updated_count
+        total_normalized = _apply_status_mapping(cursor, 'Статус_ВИК', unique_statuses)
         
         print(f"📊 Всего нормализовано записей: {total_normalized}")
         
@@ -149,17 +168,6 @@ def normalize_rk_status():
     Нормализация столбцов Статус_РК и РК в таблице logs_lnk
     """
     print("🚀 Начинаем нормализацию столбцов Статус_РК и РК")
-    
-    # Маппинг для приведения статусов к общему виду
-    status_mapping = {
-        'Годен': 'Годен',
-        'Н/П': 'Н/П',
-        'Ремонт': 'Не годен',
-        'Пересвет': 'Пересвет',
-        'Не соответствует': 'Не соответствует',
-        'Вырезать': 'Не годен',
-        'Заявлен': 'Заказ отправлен'
-    }
     
     conn = get_database_connection()
     if not conn:
@@ -230,19 +238,7 @@ def normalize_rk_status():
         unique_statuses = [row[0] for row in cursor.fetchall()]
         print(f"📊 Уникальные значения Статус_РК: {unique_statuses}")
         
-        # Применяем маппинг
-        total_normalized = 0
-        for old_status, new_status in status_mapping.items():
-            if old_status != new_status:  # Обновляем только если значения отличаются
-                cursor.execute("""
-                    UPDATE logs_lnk 
-                    SET "Статус_РК" = ? 
-                    WHERE "Статус_РК" = ?
-                """, (new_status, old_status))
-                updated_count = cursor.rowcount
-                if updated_count > 0:
-                    print(f"✅ '{old_status}' → '{new_status}': {updated_count} записей")
-                    total_normalized += updated_count
+        total_normalized = _apply_status_mapping(cursor, 'Статус_РК', unique_statuses)
         
         print(f"📊 Всего нормализовано записей: {total_normalized}")
         

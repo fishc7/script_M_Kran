@@ -477,6 +477,14 @@ ETL_CATEGORIES = {
                 'data_type': 'Цепочка: load_lnk_data.py → load_lnk_nk_aks.py',
                 'exclude_from_bulk_daily': True,
             },
+            'run_startup_etl.py': {
+                'description': 'Обновить данные при запуске',
+                'source_files': ['Журнал ЛНК_*.xlsx', 'LOG_М-КРАН_RT_ТТ*', 'Журнал сварочных работ.xlsx'],
+                'source_folder': 'НК/Журнал, НК_АКС, ОГС/Журналы',
+                'target_table': 'logs_lnk, wl_china, condition_weld, сварено_сварщиком',
+                'data_type': 'Журналы НК, WELDLOG, очистка префиксов, синхронизация и итоговые таблицы',
+                'exclude_from_bulk_daily': True,
+            },
             'load_staff_titles_M_Kran.py': {
                 'description': '👥 Расстановка персонала М_Кран по участкам',
                 'source_files': ['Сварка *.xlsx'],
@@ -773,16 +781,25 @@ def get_logs_lnk_stats():
         cursor.execute('SELECT COUNT(*) FROM logs_lnk')
         total_records = cursor.fetchone()[0]
         
-        # ВИК Годен
-        cursor.execute('SELECT COUNT(*) FROM logs_lnk WHERE "Статус_ВИК" = "Годен"')
+        # ВИК Годен (учитываем регистр: «годен» из АКС до нормализации)
+        cursor.execute(
+            'SELECT COUNT(*) FROM logs_lnk '
+            'WHERE "Статус_ВИК" IN ("Годен", "годен")'
+        )
         vik_good = cursor.fetchone()[0]
         
         # РК Годен
-        cursor.execute('SELECT COUNT(*) FROM logs_lnk WHERE "Статус_РК" = "Годен"')
+        cursor.execute(
+            'SELECT COUNT(*) FROM logs_lnk '
+            'WHERE "Статус_РК" IN ("Годен", "годен")'
+        )
         rk_good = cursor.fetchone()[0]
         
         # РК дефекты: Не годен (статусы требующие исправления)
-        cursor.execute('SELECT COUNT(*) FROM logs_lnk WHERE "Статус_РК" LIKE "%Не годен%"')
+        cursor.execute(
+            'SELECT COUNT(*) FROM logs_lnk '
+            'WHERE "Статус_РК" LIKE "%е годен%" OR "Статус_РК" LIKE "%Е годен%"'
+        )
         rk_defects = cursor.fetchone()[0]
         
         # РК Н/П (неофициальный ремонт или вырез)
@@ -1395,25 +1412,39 @@ def get_logs_lnk_stats_by_titles(titles=None):
             cursor.execute('SELECT COUNT(*) FROM logs_lnk')
         total_records = cursor.fetchone()[0]
         
-        # ВИК Годен
+        # ВИК Годен (учитываем регистр: «годен» из АКС до нормализации)
         if title_and:
-            cursor.execute(f'SELECT COUNT(*) FROM logs_lnk WHERE "Статус_ВИК" = "Годен" {title_and}')
+            cursor.execute(
+                f'SELECT COUNT(*) FROM logs_lnk WHERE "Статус_ВИК" IN ("Годен", "годен") {title_and}'
+            )
         else:
-            cursor.execute('SELECT COUNT(*) FROM logs_lnk WHERE "Статус_ВИК" = "Годен"')
+            cursor.execute(
+                'SELECT COUNT(*) FROM logs_lnk WHERE "Статус_ВИК" IN ("Годен", "годен")'
+            )
         vik_good = cursor.fetchone()[0]
         
         # РК Годен
         if title_and:
-            cursor.execute(f'SELECT COUNT(*) FROM logs_lnk WHERE "Статус_РК" = "Годен" {title_and}')
+            cursor.execute(
+                f'SELECT COUNT(*) FROM logs_lnk WHERE "Статус_РК" IN ("Годен", "годен") {title_and}'
+            )
         else:
-            cursor.execute('SELECT COUNT(*) FROM logs_lnk WHERE "Статус_РК" = "Годен"')
+            cursor.execute(
+                'SELECT COUNT(*) FROM logs_lnk WHERE "Статус_РК" IN ("Годен", "годен")'
+            )
         rk_good = cursor.fetchone()[0]
         
         # РК дефекты: Не годен (статусы требующие исправления)
         if title_and:
-            cursor.execute(f'SELECT COUNT(*) FROM logs_lnk WHERE "Статус_РК" LIKE "%Не годен%" {title_and}')
+            cursor.execute(
+                f'SELECT COUNT(*) FROM logs_lnk '
+                f'WHERE ("Статус_РК" LIKE "%е годен%" OR "Статус_РК" LIKE "%Е годен%") {title_and}'
+            )
         else:
-            cursor.execute('SELECT COUNT(*) FROM logs_lnk WHERE "Статус_РК" LIKE "%Не годен%"')
+            cursor.execute(
+                'SELECT COUNT(*) FROM logs_lnk '
+                'WHERE "Статус_РК" LIKE "%е годен%" OR "Статус_РК" LIKE "%Е годен%"'
+            )
         rk_defects = cursor.fetchone()[0]
         
         # РК Н/П (неофициальный ремонт или вырез)
@@ -1810,6 +1841,7 @@ def get_etl_priority(script_name):
     """Определяет приоритет ETL скрипта для правильной последовательности выполнения"""
     priority_map = {
         # EXTRACT этап - ЕЖЕДНЕВНЫЕ скрипты (приоритет 1-10)
+        'run_startup_etl.py': 0.5,                # Полная цепочка при запуске
         'load_lnk_data.py': 1,                    # Журнал НК НГС - результаты контроля качества
         'run_full_logs_lnk_update.py': 1.25,      # Полное обновление журнала НК (НГС + АКС)
         'load_lnk_nk_aks.py': 1.5,               # Журнал НК АКС → logs_lnk
@@ -2429,11 +2461,15 @@ def scripts():
         full_logs_lnk_update_script = os.path.normpath(
             os.path.join(Config.SCRIPTS_DIR, 'data_loaders', 'run_full_logs_lnk_update.py')
         ).replace('\\', '/')
+        startup_etl_script = os.path.normpath(
+            os.path.join(Config.SCRIPTS_DIR, 'data_loaders', 'run_startup_etl.py')
+        ).replace('\\', '/')
         logger.info("Рендерим шаблон scripts.html")
         return render_template(
             'scripts.html',
             etl_scripts=etl_scripts,
             full_logs_lnk_update_script=full_logs_lnk_update_script,
+            startup_etl_script=startup_etl_script,
         )
     except Exception as e:
         print(f"DEBUG: Ошибка в функции scripts(): {e}")
@@ -2568,6 +2604,8 @@ def run_etl_stage():
         results = []
         
         for script in stage_scripts:
+            if script.get('exclude_from_bulk_daily'):
+                continue
             try:
                 script_id = script_runner.run_script_async(script['path'])
                 results.append({
@@ -2607,6 +2645,8 @@ def run_all_etl():
             if stage in etl_scripts:
                 stage_scripts = etl_scripts[stage].get('scripts', [])
                 for script in stage_scripts:
+                    if script.get('exclude_from_bulk_daily'):
+                        continue
                     try:
                         script_id = script_runner.run_script_async(script['path'])
                         results.append({
@@ -2649,6 +2689,8 @@ def run_etl_pipeline():
             if stage in etl_scripts:
                 stage_scripts = etl_scripts[stage].get('scripts', [])
                 for script in stage_scripts:
+                    if script.get('exclude_from_bulk_daily'):
+                        continue
                     try:
                         script_id = script_runner.run_script_async(script['path'])
                         results.append({
@@ -5578,13 +5620,13 @@ def filtered_data(filter_type):
         # ИСПРАВЛЕНО: Используем точно такие же критерии, как в статистике
         filter_conditions = {
             'rk_defects': {
-                'condition': '("Статус_РК" LIKE "%Не годен%")',
+                'condition': '("Статус_РК" LIKE "%е годен%" OR "Статус_РК" LIKE "%Е годен%")',
                 'title': 'РК Вырез/Ремонт (ОФИЦИАЛЬНЫЙ)',
                 'description': 'Записи со статусом РК: Ремонт, Вырез, Вырезать',
                 'table': 'logs_lnk'
             },
             'all_defects': {
-                'condition': '("Статус_РК" LIKE "%Не годен%" OR "Статус_РК" = "Н/П")',
+                'condition': '("Статус_РК" LIKE "%е годен%" OR "Статус_РК" LIKE "%Е годен%" OR "Статус_РК" = "Н/П")',
                 'title': 'ВСЕГО НЕГОДНЫХ (по статистике)',
                 'description': 'Записи со статусом РК: Ремонт, Вырез, Вырезать, Н/П (точно как в статистике)',
                 'table': 'logs_lnk'
@@ -8443,7 +8485,7 @@ def vue_stats():
         
         try:
             # Успешные сварки - РК Годен
-            cursor.execute('SELECT COUNT(*) FROM logs_lnk WHERE "Статус_РК" = "Годен"')
+            cursor.execute('SELECT COUNT(*) FROM logs_lnk WHERE "Статус_РК" IN ("Годен", "годен")')
             successful_welds = cursor.fetchone()[0]
         except Exception as e:
             logger.warning(f"Ошибка при подсчете успешных сварки: {e}")
@@ -8462,14 +8504,17 @@ def vue_stats():
         
         try:
             # ВИК Годен
-            cursor.execute('SELECT COUNT(*) FROM logs_lnk WHERE "Статус_ВИК" = "Годен"')
+            cursor.execute('SELECT COUNT(*) FROM logs_lnk WHERE "Статус_ВИК" IN ("Годен", "годен")')
             vik_good = cursor.fetchone()[0]
         except Exception as e:
             logger.warning(f"Ошибка при подсчете ВИК годен: {e}")
         
         try:
             # РК дефекты
-            cursor.execute('SELECT COUNT(*) FROM logs_lnk WHERE "Статус_РК" LIKE "%Не годен%"')
+            cursor.execute(
+                'SELECT COUNT(*) FROM logs_lnk '
+                'WHERE "Статус_РК" LIKE "%е годен%" OR "Статус_РК" LIKE "%Е годен%"'
+            )
             rk_defects = cursor.fetchone()[0]
         except Exception as e:
             logger.warning(f"Ошибка при подсчете РК дефекты: {e}")

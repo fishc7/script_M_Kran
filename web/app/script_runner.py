@@ -32,7 +32,15 @@ class _LiveCaptureStream:
         if data is None:
             return 0
         text = str(data)
-        self._buffer.write(text)
+        try:
+            self._buffer.write(text)
+        except Exception:
+            # Буфер уже закрыт: не роняем весь сайт, пишем в настоящую консоль.
+            try:
+                if sys.__stdout__ is not None:
+                    sys.__stdout__.write(text)
+            except Exception:
+                pass
         try:
             self._on_write(text)
         except Exception:
@@ -126,19 +134,33 @@ class WebScriptRunner:
     
     def restore_environment(self, env_state: Dict[str, Any]):
         """Восстанавливает исходное состояние окружения"""
+        # Сначала консоль: иначе print на сайте падает, если буфер захвата уже закрыт.
+        self._restore_stdio(env_state)
         try:
-            # Восстанавливаем рабочую директорию
             os.chdir(env_state['original_cwd'])
-            
-            # Восстанавливаем sys.path
-            sys.path = env_state['original_path']
-            
-            # Восстанавливаем stdout/stderr
-            sys.stdout = env_state['original_stdout']
-            sys.stderr = env_state['original_stderr']
-            
         except Exception as e:
-            self.logger.error(f"Ошибка при восстановлении окружения: {e}")
+            self.logger.error(f"Ошибка при восстановлении рабочей папки: {e}")
+        try:
+            sys.path = env_state['original_path']
+        except Exception as e:
+            self.logger.error(f"Ошибка при восстановлении sys.path: {e}")
+
+    def _restore_stdio(self, env_state: Dict[str, Any]):
+        """Возвращает stdout/stderr, даже если рабочая папка уже недоступна."""
+        for name, saved_key, fallback in (
+            ('stdout', 'original_stdout', sys.__stdout__),
+            ('stderr', 'original_stderr', sys.__stderr__),
+        ):
+            saved = env_state.get(saved_key)
+            if saved is None or getattr(saved, 'closed', False):
+                saved = fallback
+            try:
+                setattr(sys, name, saved)
+            except Exception:
+                try:
+                    setattr(sys, name, fallback)
+                except Exception:
+                    pass
     
     def run_script_direct_import(self, script_path: str, script_id: str, script_args: list = None) -> Dict[str, Any]:
         """Запускает скрипт через прямой импорт (как в десктопном приложении)"""
@@ -348,12 +370,19 @@ class WebScriptRunner:
             # Восстанавливаем оригинальные аргументы командной строки
             sys.argv = original_argv
             
-            # Восстанавливаем окружение
+            # Сначала вернуть консоль сайта, и только потом закрывать буфер захвата.
+            self._restore_stdio(env_state)
             self.restore_environment(env_state)
-            
-            # Закрываем StringIO
-            captured_output.close()
-            captured_errors.close()
+            if sys.stdout is not live_output_stream:
+                try:
+                    captured_output.close()
+                except Exception:
+                    pass
+            if sys.stderr is not live_error_stream:
+                try:
+                    captured_errors.close()
+                except Exception:
+                    pass
         
         return result
     

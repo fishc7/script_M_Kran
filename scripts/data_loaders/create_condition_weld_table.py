@@ -263,8 +263,7 @@ def create_condition_weld_table():
         if cursor.fetchone():
             logger.warning("⚠️ Таблица condition_weld уже существует. Удаляем старую таблицу...")
             cursor.execute("DROP TABLE condition_weld")
-            conn.commit()
-            logger.info("✅ Старая таблица удалена")
+            logger.info("✅ Старая таблица удалена, создаём новую в той же транзакции")
         
         # SQL запрос для создания таблицы condition_weld с новыми столбцами заявок
         # Адаптируем синтаксис для PostgreSQL и SQLite

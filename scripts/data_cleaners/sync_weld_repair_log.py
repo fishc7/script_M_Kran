@@ -104,7 +104,7 @@ def sync_weld_repair_log():
                         time.sleep(2)  # Ждем 2 секунды перед повторной попыткой
                     else:
                         print("ОШИБКА: Не удалось подключиться к базе данных после нескольких попыток")
-                        return
+                        return False
                 else:
                     raise e
         
@@ -153,7 +153,7 @@ def sync_weld_repair_log():
         
         if not table_exists:
             print("ОШИБКА: Таблица weld_repair_log не существует")
-            return
+            return False
         
         if USE_POSTGRESQL:
             cursor.execute("SELECT COUNT(*) as count FROM weld_repair_log")
@@ -168,7 +168,7 @@ def sync_weld_repair_log():
         
         if weld_repair_count == total_defects_stats:
             print("OK: Количество записей корректное - синхронизация не требуется")
-            return
+            return True
         
         print(f"ОШИБКА: ОБНАРУЖЕНО РАСХОЖДЕНИЕ: weld_repair_log ({weld_repair_count}) vs статистика ({total_defects_stats})")
         
@@ -273,7 +273,7 @@ def sync_weld_repair_log():
                         if "database is locked" in error_str or "disk i/o error" in error_str:
                             print("ОШИБКА: База данных заблокирована при удалении записей")
                             conn.rollback()
-                            return
+                            return False
                         else:
                             raise e
                 
@@ -401,7 +401,7 @@ def sync_weld_repair_log():
                     if "database is locked" in error_str or "disk i/o error" in error_str:
                         print("ОШИБКА: База данных заблокирована при сохранении изменений")
                         conn.rollback()
-                        return
+                        return False
                     else:
                         raise e
                 
@@ -432,6 +432,7 @@ def sync_weld_repair_log():
     
     print("\n" + "=" * 80)
     print("OK: СИНХРОНИЗАЦИЯ ЗАВЕРШЕНА")
+    return True
 
 def run_script():
     """Функция для запуска скрипта через веб-интерфейс"""
